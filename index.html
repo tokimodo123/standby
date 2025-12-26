@@ -234,26 +234,36 @@
       color: var(--muted);
     }
 
-    /* Stopwatch */
+    /* Stopwatch (BIGGER + near edges) */
+    .swCard{ padding:.75rem; }                 /* ちょい詰めてギリ寄せ */
+    .swLabel{ margin-bottom:.45rem; }          /* ラベル分の余白も削る */
     .swRow{
       display:flex;
       align-items:center;
       justify-content:space-between;
       gap:.75rem;
-      flex-wrap:wrap;
+      flex-wrap:nowrap;                        /* できるだけ横並び維持 */
     }
     .swDisplay{
       font-variant-numeric: tabular-nums;
-      font-weight: 900;
+      font-weight: 950;
       letter-spacing: .02em;
-      font-size: 2.5rem;
-      line-height:1.1;
+      font-size: 3.4rem;                       /* デカく */
+      line-height: 1;
       white-space:nowrap;
+      flex: 1 1 auto;
+      min-width: 0;
     }
     .swBtns{
       display:flex;
-      gap:.625rem;
-      flex-wrap:wrap;
+      gap:.5rem;
+      flex: 0 0 auto;
+    }
+    .swBtn{
+      padding: .95rem 1.05rem;                 /* デカく */
+      font-size: 1.05rem;                      /* デカく */
+      border-radius: 1.05rem;
+      font-weight: 900;
     }
 
     /* RIGHT */
@@ -275,7 +285,7 @@
       gap:.625rem;
     }
 
-    /* 拡大縮小：背景パネル右下へ（座布団なし・小さめ） */
+    /* 拡大縮小：背景パネル右下（小さめ） */
     .scaleCtl{
       position:absolute;
       right: .875rem;
@@ -323,15 +333,52 @@
       pointer-events:auto;
     }
 
+    /* Fullscreen button (site bottom-left) */
+    .fsBtn{
+      position:fixed;
+      left: 12px;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      z-index: 9999;
+
+      width: 42px;
+      height: 42px;
+      border-radius: 14px;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(0,0,0,.18);
+      color: var(--fg);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight: 900;
+      cursor:pointer;
+      -webkit-tap-highlight-color: transparent;
+      user-select:none;
+      box-shadow: 0 .625rem 1.375rem var(--shadow);
+    }
+    html[data-theme="light"] .fsBtn{
+      border: 1px solid rgba(0,0,0,.15);
+      background: rgba(255,255,255,.55);
+      box-shadow: 0 .625rem 1.375rem var(--shadow);
+    }
+    .fsBtn:active{ transform: translateY(1px); }
+
     @media (max-width: 980px){
       .digital .time{font-size: 5.375rem;}
       .controls{flex-direction:row;}
-      .swDisplay{font-size: 2.125rem;}
+
+      .swDisplay{font-size: 2.8rem;}
+      .swBtn{font-size: 1rem; padding: .85rem .95rem;}
+    }
+    @media (max-width: 520px){
+      .swDisplay{font-size: 2.4rem;}
+      .swBtn{font-size: .95rem; padding: .8rem .9rem;}
     }
   </style>
 </head>
 
 <body>
+  <button class="fsBtn" id="fsBtn" aria-label="fullscreen">⛶</button>
+
   <div class="wrap">
     <!-- LEFT -->
     <section class="panel">
@@ -400,13 +447,13 @@
           </div>
         </div>
 
-        <div class="card">
-          <div class="label">STOPWATCH</div>
+        <div class="card swCard">
+          <div class="label swLabel">STOPWATCH</div>
           <div class="swRow">
             <div class="swDisplay" id="swText">00:00:00</div>
             <div class="swBtns">
-              <button class="btn" id="swStartStop">START</button>
-              <button class="btn" id="swReset">RESET</button>
+              <button class="btn swBtn" id="swStartStop">START</button>
+              <button class="btn swBtn" id="swReset">RESET</button>
             </div>
           </div>
         </div>
@@ -425,7 +472,7 @@
         <button class="btn" id="wxBtn">天気更新</button>
       </div>
 
-      <!-- 拡大縮小：右下（旧天気更新の位置） -->
+      <!-- 拡大縮小：右下 -->
       <div class="scaleCtl" aria-label="scale control">
         <div class="sbtn" id="scaleDown">−</div>
         <div class="pct" id="scalePct">100%</div>
@@ -438,7 +485,7 @@
 (function(){
   function storageGet(key){ try { return localStorage.getItem(key); } catch(e){ return null; } }
   function storageSet(key, val){ try { localStorage.setItem(key, val); } catch(e){} }
-  function pad(n){ return (n<10?"0":"")+n; }
+  function pad2(n){ return (n<10?"0":"")+n; }
   function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
   function round2(x){ return Math.round(x*100)/100; }
   function lerp(a,b,t){ return a+(b-a)*t; }
@@ -453,6 +500,7 @@
   window.addEventListener("orientationchange", setOrient);
   setOrient();
 
+  // theme
   const themeKey = "standby_theme_v10";
   function applyTheme(t){
     root.setAttribute("data-theme", t);
@@ -470,6 +518,22 @@
     const cur = root.getAttribute("data-theme") || "dark";
     applyTheme(cur === "dark" ? "light" : "dark");
   });
+
+  // fullscreen
+  const fsBtn = document.getElementById("fsBtn");
+  async function toggleFullscreen(){
+    try{
+      if(document.fullscreenElement){
+        await document.exitFullscreen();
+      }else{
+        const el = document.documentElement;
+        if(el.requestFullscreen) await el.requestFullscreen();
+      }
+    }catch(e){
+      // iOSの制限で失敗することがある（無視）
+    }
+  }
+  fsBtn.addEventListener("click", toggleFullscreen);
 
   // canvas
   const canvas = document.getElementById("scene");
@@ -522,7 +586,6 @@
   const dow = ["日","月","火","水","木","金","土"];
 
   let sceneHour = 12, sceneMin = 0, sceneSec = 0;
-
   function rot(el, deg){ el.setAttribute("transform", "rotate("+deg+")"); }
 
   (function(){
@@ -554,11 +617,10 @@
     rot(handM, min*6);
     rot(handH, hour*30);
   }
-
   function tick(){
     const d = new Date();
-    timeEl.textContent = pad(d.getHours())+":"+pad(d.getMinutes());
-    dateEl.textContent = d.getFullYear()+"/"+pad(d.getMonth()+1)+"/"+pad(d.getDate())+" ("+dow[d.getDay()]+")";
+    timeEl.textContent = pad2(d.getHours())+":"+pad2(d.getMinutes());
+    dateEl.textContent = d.getFullYear()+"/"+pad2(d.getMonth()+1)+"/"+pad2(d.getDate())+" ("+dow[d.getDay()]+")";
     updateAnalog(d);
     sceneHour = d.getHours();
     sceneMin = d.getMinutes();
@@ -722,12 +784,11 @@
       fallbackTokyo(reason).then(finish).catch(finish);
     }, { enableHighAccuracy:false, timeout:8000, maximumAge: 10*60*1000 });
   }
-
   document.getElementById("wxBtn").addEventListener("click", updateWeather);
   updateWeather();
   setInterval(updateWeather, 10*60*1000);
 
-  // stopwatch
+  // stopwatch (mm:ss:cc)
   const swText = document.getElementById("swText");
   const swStartStop = document.getElementById("swStartStop");
   const swReset = document.getElementById("swReset");
@@ -735,34 +796,49 @@
   let swRunning = false;
   let swBaseMs = 0;
   let swStartAt = 0;
-  let swTimer = 0;
+  let swRaf = 0;
 
-  function fmtHMS(ms){
-    ms = Math.max(0, ms|0);
-    const totalSec = Math.floor(ms/1000);
-    const s = totalSec % 60;
-    const totalMin = Math.floor(totalSec/60);
-    const m = totalMin % 60;
-    const h = Math.floor(totalMin/60);
-    return pad(h)+":"+pad(m)+":"+pad(s);
+  function swNowMs(){
+    return swRunning ? (swBaseMs + (performance.now() - swStartAt)) : swBaseMs;
   }
-  function swNowMs(){ return swRunning ? (swBaseMs + (performance.now() - swStartAt)) : swBaseMs; }
-  function swRender(){ swText.textContent = fmtHMS(swNowMs()); }
-  function swSetButtons(){ swStartStop.textContent = swRunning ? "STOP" : "START"; }
-  function swStartLoop(){ clearInterval(swTimer); swTimer = setInterval(swRender, 200); }
-  function swStopLoop(){ clearInterval(swTimer); swTimer = 0; }
+  function fmtMSCS(ms){
+    const csTotal = Math.floor(ms / 10);          // 1/100秒
+    const cs = csTotal % 100;
+    const secTotal = Math.floor(csTotal / 100);
+    const sec = secTotal % 60;
+    const min = Math.floor(secTotal / 60);
+    return pad2(min) + ":" + pad2(sec) + ":" + pad2(cs);
+  }
+  function swRender(){
+    swText.textContent = fmtMSCS(swNowMs());
+  }
+  function swSetButtons(){
+    swStartStop.textContent = swRunning ? "STOP" : "START";
+  }
+  function swLoop(){
+    swRender();
+    if(swRunning) swRaf = requestAnimationFrame(swLoop);
+  }
+  function swStartAnim(){
+    cancelAnimationFrame(swRaf);
+    swRaf = requestAnimationFrame(swLoop);
+  }
+  function swStopAnim(){
+    cancelAnimationFrame(swRaf);
+    swRaf = 0;
+  }
 
   swStartStop.addEventListener("click", ()=>{
     if(!swRunning){
       swRunning = true;
       swStartAt = performance.now();
       swSetButtons();
-      swStartLoop();
+      swStartAnim();
     }else{
       swBaseMs = swNowMs();
       swRunning = false;
       swSetButtons();
-      swStopLoop();
+      swStopAnim();
       swRender();
     }
   });
@@ -770,13 +846,13 @@
     swRunning = false;
     swBaseMs = 0;
     swSetButtons();
-    swStopLoop();
+    swStopAnim();
     swRender();
   });
   swSetButtons();
   swRender();
 
-  // background animation
+  // background animation (fish + sky)
   function skyParams(hourFloat){
     const nightTop=[18,16,40], nightBot=[10,10,22];
     const dawnTop =[255,170,135], dawnBot =[120,70,130];
