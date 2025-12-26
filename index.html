@@ -52,7 +52,7 @@
       padding:18px;
       box-sizing:border-box;
       display:grid;
-      grid-template-rows: auto auto 1fr;
+      grid-template-rows: auto auto auto 1fr;
       gap:14px;
     }
     .topRow{
@@ -93,8 +93,11 @@
       cursor:pointer;
       white-space:nowrap;
       box-shadow: 0 10px 22px var(--shadow);
+      user-select:none;
+      -webkit-tap-highlight-color: transparent;
     }
     .btn:active{transform: translateY(1px);}
+    .btnRow{display:flex; gap:10px; flex-wrap:wrap;}
 
     .midRow{
       display:grid;
@@ -116,48 +119,63 @@
       margin-bottom: 10px;
       letter-spacing: .06em;
     }
+
+    /* Analog clock */
     .analogWrap{
       display:flex;
       align-items:center;
       justify-content:center;
       height: calc(100% - 22px);
     }
-
     .clockSvg{
       width: min(280px, 22vw);
       height: auto;
       filter: drop-shadow(0 10px 22px var(--shadow));
     }
-    .dial{
-      fill: transparent;
-      stroke: var(--border);
-      stroke-width: 2;
-    }
-    .face{
-      fill: rgba(0,0,0,.22);
-    }
-    html[data-theme="light"] .face{ fill: rgba(255,255,255,.50); }
-
+    .dial{fill: transparent; stroke: var(--border); stroke-width: 2;}
+    .face{fill: rgba(0,0,0,.20);}
+    html[data-theme="light"] .face{ fill: rgba(255,255,255,.55); }
     .tick{stroke: rgba(255,255,255,.35); stroke-width: 2;}
     .tickBig{stroke: rgba(255,255,255,.55); stroke-width: 3;}
     html[data-theme="light"] .tick{stroke: rgba(0,0,0,.30);}
     html[data-theme="light"] .tickBig{stroke: rgba(0,0,0,.45);}
-
     /* 針を細く */
     .handH{stroke: var(--fg); stroke-width: 5; stroke-linecap: round;}
     .handM{stroke: var(--fg); stroke-width: 4; stroke-linecap: round; opacity:.95;}
     .handS{stroke: var(--accent); stroke-width: 2; stroke-linecap: round; opacity:.95;}
     .pin{fill: var(--fg); opacity:.9;}
 
+    /* Weather */
     .wxMain{display:flex; align-items:center; gap:12px;}
     .wxIcon{font-size:34px; width:40px; text-align:center;}
     .wxTemp{font-size:30px; font-weight:900; line-height:1;}
     .wxPlace{margin-top:6px; font-size:14px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
     .wxDetail{margin-top:6px; font-size:12px; color:var(--muted);}
-    .wxMeta{margin-top:10px; font-size:12px; color:var(--muted); line-height:1.55;}
+    .wxMeta{margin-top:10px; font-size:12px; color:var(--muted); line-height:1.55; white-space:pre-line;}
+
+    /* Stopwatch */
+    .swDisplay{
+      font-variant-numeric: tabular-nums;
+      font-weight: 900;
+      letter-spacing: .02em;
+      font-size: 46px;
+      line-height:1.1;
+      margin-top: 6px;
+    }
+    .swSub{
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 12px;
+    }
 
     /* RIGHT */
     #scene{position:absolute; inset:0; width:100%; height:100%;}
+    .rightOverlay{
+      position:absolute; inset:0;
+      pointer-events:none;
+      background: linear-gradient(to bottom, rgba(0,0,0,.10), rgba(0,0,0,.22));
+      opacity: .45;
+    }
     .rightBtns{
       position:absolute;
       right:14px;
@@ -172,6 +190,7 @@
       .midRow{grid-template-columns: 1fr;}
       .clockSvg{width:min(300px, 44vw);}
       .controls{flex-direction:row;}
+      .swDisplay{font-size: 38px;}
     }
   </style>
 </head>
@@ -224,6 +243,16 @@
           </div>
         </div>
 
+        <div class="card">
+          <div class="label">STOPWATCH</div>
+          <div class="swDisplay" id="swText">00:00.00</div>
+          <div class="btnRow" style="margin-top:12px;">
+            <button class="btn" id="swStartStop">Start</button>
+            <button class="btn" id="swReset">Reset</button>
+          </div>
+          <div class="swSub" id="swHint">勉強の計測にどうぞ</div>
+        </div>
+
         <div style="flex:1"></div>
       </div>
     </section>
@@ -231,6 +260,7 @@
     <!-- RIGHT -->
     <section class="panel">
       <canvas id="scene"></canvas>
+      <div class="rightOverlay"></div>
       <div class="rightBtns">
         <button class="btn" id="wxBtn">天気更新</button>
       </div>
@@ -239,13 +269,13 @@
 
 <script>
 (function(){
-  // ====== Safe storage ======
+  // ---- safe storage ----
   function storageGet(key){ try { return localStorage.getItem(key); } catch(e){ return null; } }
   function storageSet(key, val){ try { localStorage.setItem(key, val); } catch(e){} }
 
-  // ====== Theme ======
-  var themeKey = "standby_theme_v4";
+  // ---- theme ----
   var root = document.documentElement;
+  var themeKey = "standby_theme_v5";
   function applyTheme(t){
     root.setAttribute("data-theme", t);
     storageSet(themeKey, t);
@@ -253,9 +283,9 @@
   }
   var saved = storageGet(themeKey);
   if(saved) applyTheme(saved);
-  else {
+  else{
     var prefersLight = false;
-    try { prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches; } catch(e){}
+    try{ prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches; }catch(e){}
     applyTheme(prefersLight ? "light" : "dark");
   }
   document.getElementById("themeBtn").addEventListener("click", function(){
@@ -263,32 +293,31 @@
     applyTheme(cur === "dark" ? "light" : "dark");
   });
 
-  // ====== Chat ======
+  // ---- chat ----
   document.getElementById("chatBtn").addEventListener("click", function(){
     window.open("https://chatgpt.com", "_blank");
   });
 
-  // ====== Digital + Analog clock ======
+  // ---- clock ----
   var timeEl = document.getElementById("time");
   var dateEl = document.getElementById("date");
   var handH = document.getElementById("handH");
   var handM = document.getElementById("handM");
   var handS = document.getElementById("handS");
+
   var sceneHour = 12, sceneMin = 0, sceneSec = 0;
-
-  function pad(n){ return (n<10 ? "0" : "") + n; }
+  function pad(n){ return (n<10?"0":"")+n; }
   var dow = ["日","月","火","水","木","金","土"];
+  function rot(el, deg){ el.setAttribute("transform", "rotate("+deg+")"); }
 
-  function rot(el, deg){ el.setAttribute("transform", "rotate(" + deg + ")"); }
-
-  // ticks create once
+  // ticks once
   (function(){
     var ticksG = document.getElementById("ticks");
     var s = "";
     for(var i=0;i<60;i++){
-      var a = (Math.PI*2) * (i/60);
+      var a = (Math.PI*2)*(i/60);
       var r1 = 80;
-      var r2 = (i%5===0) ? 70 : 74;
+      var r2 = (i%5===0)?70:74;
       var x1 = 100 + Math.sin(a)*r1;
       var y1 = 100 - Math.cos(a)*r1;
       var x2 = 100 + Math.sin(a)*r2;
@@ -300,15 +329,13 @@
   })();
 
   function updateAnalog(d){
-    var h = d.getHours() % 12;
+    var h = d.getHours()%12;
     var m = d.getMinutes();
     var s = d.getSeconds();
     var ms = d.getMilliseconds();
-
     var sec = s + ms/1000;
     var min = m + sec/60;
     var hour = h + min/60;
-
     rot(handS, sec*6);
     rot(handM, min*6);
     rot(handH, hour*30);
@@ -316,7 +343,7 @@
 
   function tick(){
     var d = new Date();
-    timeEl.textContent = pad(d.getHours()) + ":" + pad(d.getMinutes());
+    timeEl.textContent = pad(d.getHours())+":"+pad(d.getMinutes());
     dateEl.textContent = d.getFullYear()+"/"+pad(d.getMonth()+1)+"/"+pad(d.getDate())+" ("+dow[d.getDay()]+")";
     updateAnalog(d);
     sceneHour = d.getHours();
@@ -326,13 +353,14 @@
   tick();
   setInterval(tick, 1000);
 
-  // ====== Weather ======
+  // ---- weather ----
   var wxIconEl = document.getElementById("wxIcon");
   var wxTempEl = document.getElementById("wxTemp");
   var wxPlaceEl = document.getElementById("wxPlace");
   var wxDetailEl = document.getElementById("wxDetail");
   var wxMetaEl = document.getElementById("wxMeta");
 
+  // for scene effects
   var currentWxCode = null;
   var currentWxWind = 0;
 
@@ -368,43 +396,27 @@
     wxDetailEl.textContent = state.detail || "—";
     wxMetaEl.textContent = state.meta || "—";
     wxIconEl.textContent = state.icon || "⛅️";
-    if(typeof state.code === "number") currentWxCode = state.code;
-    if(typeof state.wind === "number") currentWxWind = state.wind;
+    if(typeof state.code==="number") currentWxCode = state.code;
+    if(typeof state.wind==="number") currentWxWind = state.wind;
   }
 
   function fetchWithTimeout(url, ms){
     return new Promise(function(resolve, reject){
       var done = false;
       var timer = setTimeout(function(){
-        if(done) return;
-        done = true;
-        reject(new Error("timeout"));
+        if(done) return; done = true; reject(new Error("timeout"));
       }, ms);
 
       fetch(url, {cache:"no-store"})
-        .then(function(r){
-          if(!r.ok) throw new Error("http");
-          return r.json();
-        })
-        .then(function(j){
-          if(done) return;
-          done = true;
-          clearTimeout(timer);
-          resolve(j);
-        })
-        .catch(function(e){
-          if(done) return;
-          done = true;
-          clearTimeout(timer);
-          reject(e);
-        });
+        .then(function(r){ if(!r.ok) throw new Error("http"); return r.json(); })
+        .then(function(j){ if(done) return; done=true; clearTimeout(timer); resolve(j); })
+        .catch(function(e){ if(done) return; done=true; clearTimeout(timer); reject(e); });
     });
   }
 
   function fmtHHMM(iso){
-    // "2025-12-26T06:45" -> "06:45"
     if(!iso) return "—";
-    var t = iso.split("T")[1] || "";
+    var t = (iso.split("T")[1] || "");
     return t.slice(0,5) || "—";
   }
 
@@ -461,7 +473,7 @@
   }
 
   function fallbackTokyo(reason){
-    return updateWeatherWithCoords(35.681236, 139.767125, "東京（" + reason + "）");
+    return updateWeatherWithCoords(35.681236, 139.767125, "東京（"+reason+"）");
   }
 
   function updateWeather(){
@@ -470,7 +482,6 @@
     var hardTimeout = setTimeout(function(){
       fallbackTokyo("取得が長引いたため東京を表示");
     }, 12000);
-
     function finish(){ clearTimeout(hardTimeout); }
 
     if(!navigator.geolocation){
@@ -483,13 +494,11 @@
       var lon = pos.coords.longitude;
 
       reverseGeocode(lat, lon).then(function(place){
-        // ここがポイント：英語 lat/lon を日本語に
         var label = place || ("緯度 " + lat.toFixed(2) + " / 経度 " + lon.toFixed(2));
         return updateWeatherWithCoords(lat, lon, label);
       }).then(finish).catch(function(){
         fallbackTokyo("天気API失敗").then(finish).catch(finish);
       });
-
     }, function(err){
       var reason = (err && err.code === 1) ? "位置情報拒否" : "位置情報エラー";
       fallbackTokyo(reason).then(finish).catch(finish);
@@ -500,7 +509,71 @@
   updateWeather();
   setInterval(updateWeather, 10*60*1000);
 
-  // ====== Right Scene (cute pixel girl + cat + window fish, time-based sky) ======
+  // ---- STOPWATCH ----
+  var swText = document.getElementById("swText");
+  var swStartStop = document.getElementById("swStartStop");
+  var swReset = document.getElementById("swReset");
+
+  var swRunning = false;
+  var swBaseMs = 0;          // accumulated
+  var swStartAt = 0;         // performance.now at start
+  var swRAF = 0;
+
+  function fmtStopwatch(ms){
+    ms = Math.max(0, ms|0);
+    var totalCs = Math.floor(ms/10); // centiseconds
+    var cs = totalCs % 100;
+    var totalSec = Math.floor(totalCs/100);
+    var sec = totalSec % 60;
+    var min = Math.floor(totalSec/60);
+    if(min < 100) return pad(min)+":"+pad(sec)+"."+pad(cs);
+    // 100分超えたら hh:mm:ss
+    var hr = Math.floor(min/60);
+    min = min % 60;
+    return pad(hr)+":"+pad(min)+":"+pad(sec);
+  }
+
+  function swNowMs(){
+    return swRunning ? (swBaseMs + (performance.now() - swStartAt)) : swBaseMs;
+  }
+
+  function swRender(){
+    swText.textContent = fmtStopwatch(swNowMs());
+    if(swRunning) swRAF = requestAnimationFrame(swRender);
+  }
+
+  function swSetButtons(){
+    swStartStop.textContent = swRunning ? "Stop" : "Start";
+  }
+
+  swStartStop.addEventListener("click", function(){
+    if(!swRunning){
+      swRunning = true;
+      swStartAt = performance.now();
+      swSetButtons();
+      cancelAnimationFrame(swRAF);
+      swRender();
+    }else{
+      swBaseMs = swNowMs();
+      swRunning = false;
+      swSetButtons();
+      cancelAnimationFrame(swRAF);
+      swText.textContent = fmtStopwatch(swBaseMs);
+    }
+  });
+
+  swReset.addEventListener("click", function(){
+    swRunning = false;
+    swBaseMs = 0;
+    swSetButtons();
+    cancelAnimationFrame(swRAF);
+    swText.textContent = "00:00.00";
+  });
+
+  swSetButtons();
+  swText.textContent = "00:00.00";
+
+  // ---- RIGHT CANVAS: emo sky + sun/moon + stars + fishes (+ optional rain/snow) ----
   var canvas = document.getElementById("scene");
   var ctx = canvas.getContext("2d", {alpha:true});
 
@@ -517,333 +590,235 @@
   function lerp(a,b,t){ return a+(b-a)*t; }
   function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
 
-  function skyParams(h){
-    var nightTop=[18,16,34], nightBot=[12,10,22];
-    var mornTop=[110,175,255], mornBot=[210,235,255];
-    var dayTop =[80,170,255], dayBot =[200,240,255];
-    var setTop =[235,110,140], setBot=[65,40,90];
+  // sky palette by time: night → dawn orange → day blue → sunset orange → night
+  function skyParams(hourFloat){
+    var nightTop=[18,16,36], nightBot=[10,10,20];
+    var dawnTop =[255,155,120], dawnBot =[110,70,120];
+    var dayTop  =[70,170,255], dayBot  =[205,242,255];
+    var duskTop =[255,130,140], duskBot=[70,45,110];
 
-    function mix(c1,c2,k){
-      return [lerp(c1[0],c2[0],k), lerp(c1[1],c2[1],k), lerp(c1[2],c2[2],k)];
-    }
+    function mix(c1,c2,k){ return [lerp(c1[0],c2[0],k), lerp(c1[1],c2[1],k), lerp(c1[2],c2[2],k)]; }
 
+    var h = hourFloat;
     var top, bot, nightness;
-    if(h<5){ top=nightTop; bot=nightBot; nightness=1; }
-    else if(h<9){
-      var k=(h-5)/4;
-      top=mix(nightTop,mornTop,k);
-      bot=mix(nightBot,mornBot,k);
-      nightness=1-k;
-    }else if(h<16){
-      var k2=(h-9)/7;
-      top=mix(mornTop,dayTop,k2);
-      bot=mix(mornBot,dayBot,k2);
-      nightness=0;
-    }else if(h<19){
-      var k3=(h-16)/3;
-      top=mix(dayTop,setTop,k3);
-      bot=mix(dayBot,setBot,k3);
-      nightness=k3*0.55;
+
+    if(h < 5){
+      top = nightTop; bot = nightBot; nightness = 1;
+    }else if(h < 8){ // dawn
+      var k = (h-5)/3;
+      top = mix(nightTop, dawnTop, k);
+      bot = mix(nightBot, dawnBot, k);
+      nightness = 1-k*0.9;
+    }else if(h < 16){ // day
+      var k2 = (h-8)/8;
+      top = mix(dawnTop, dayTop, k2);
+      bot = mix(dawnBot, dayBot, k2);
+      nightness = 0;
+    }else if(h < 19){ // sunset
+      var k3 = (h-16)/3;
+      top = mix(dayTop, duskTop, k3);
+      bot = mix(dayBot, duskBot, k3);
+      nightness = k3*0.55;
     }else{
-      var k4=(h-19)/5;
-      top=mix(setTop,nightTop,clamp(k4,0,1));
-      bot=mix(setBot,nightBot,clamp(k4,0,1));
-      nightness=0.55+0.45*clamp(k4,0,1);
+      var k4 = (h-19)/5;
+      top = mix(duskTop, nightTop, clamp(k4,0,1));
+      bot = mix(duskBot, nightBot, clamp(k4,0,1));
+      nightness = 0.55 + 0.45*clamp(k4,0,1);
     }
     return {top:top, bot:bot, nightness:nightness};
   }
 
-  function bodyPos(p){
-    var x = lerp(0.12, 0.88, p);
+  function arcPos(p){
+    // arc across sky
+    var x = lerp(0.08, 0.92, p);
     var y = 0.62 - Math.sin(p*Math.PI)*0.42;
-    return {x:x,y:y};
+    return {x:x, y:y};
   }
 
-  // tiny stars (for window only)
+  // stars
   var stars = [];
-  for(var i=0;i<120;i++){
+  for(var i=0;i<160;i++){
     stars.push({x:((i*97)%1000)/1000, y:((i*173)%1000)/1000, s:((i*37)%7)+1});
   }
 
-  // fish
-  var fish = [
-    {x:0.15,y:0.28,v:0.030, c:"#ff6aa8"},
-    {x:0.65,y:0.24,v:0.022, c:"#a98bff"},
-    {x:0.42,y:0.33,v:0.018, c:"#ffb86b"}
-  ];
+  // fish objects
+  function makeFish(){
+    var colors = ["rgba(255,106,168,.92)","rgba(152,215,255,.92)","rgba(255,195,120,.92)","rgba(170,140,255,.92)"];
+    return {
+      x: Math.random()*1.2 - 0.1,
+      y: Math.random()*0.55 + 0.20,
+      v: 0.03 + Math.random()*0.05,
+      s: 0.8 + Math.random()*0.9,
+      c: colors[(Math.random()*colors.length)|0],
+      dir: (Math.random()<0.5)?1:-1,
+      bob: Math.random()*6.28
+    };
+  }
+  var fishes = [];
+  for(var f=0; f<10; f++) fishes.push(makeFish());
 
-  // pixel draw helper
-  function drawSprite(grid, x, y, scale, map){
-    for(var iy=0; iy<grid.length; iy++){
-      var row = grid[iy];
-      for(var ix=0; ix<row.length; ix++){
-        var ch = row.charAt(ix);
-        if(ch === ".") continue;
-        var col = map[ch];
-        if(!col) continue;
-        ctx.fillStyle = col;
-        ctx.fillRect(x + ix*scale, y + iy*scale, scale, scale);
-      }
-    }
+  // rain/snow particles (optional)
+  var drops = [];
+  for(var d=0; d<160; d++) drops.push({x:Math.random(), y:Math.random(), v:0.9+Math.random()*1.4, l:0.015+Math.random()*0.02});
+  var flakes = [];
+  for(var s=0; s<130; s++) flakes.push({x:Math.random(), y:Math.random(), v:0.12+Math.random()*0.25, w:(Math.random()*2-1)*0.10});
+
+  function wxKind(code){
+    if(code == null) return "unknown";
+    if(code===0||code===1) return "clear";
+    if(code===2||code===3) return "cloudy";
+    if(code===45||code===48) return "fog";
+    if(code===51||code===53||code===55||code===56||code===57) return "drizzle";
+    if(code===61||code===63||code===65||code===66||code===67||code===80||code===81||code===82||code===95||code===96||code===99) return "rain";
+    if(code===71||code===73||code===75||code===77||code===85||code===86) return "snow";
+    return "cloudy";
   }
 
-  // Cute girl+cat scene (original pixel art)
-  // まばたき/猫しっぽ/ページめくり：frameで切替
-  function drawGirlScene(W,H,tt){
-    var isLight = (root.getAttribute("data-theme")==="light");
-    var accent = isLight ? "rgba(0,0,0,.18)" : "rgba(0,0,0,.28)";
+  function drawFish(px, py, size, dir, color){
+    // simple emo fish (pixel-ish)
+    ctx.save();
+    ctx.translate(px, py);
+    ctx.scale(dir, 1);
+    ctx.fillStyle = color;
 
-    // room base
-    ctx.fillStyle = isLight ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.14)";
-    ctx.fillRect(0,0,W,H);
+    // body
+    ctx.globalAlpha = 0.90;
+    ctx.fillRect(-10*size, -3*size, 20*size, 6*size);
+    // head bump
+    ctx.fillRect(8*size, -2*size, 4*size, 4*size);
+    // tail
+    ctx.globalAlpha = 0.75;
+    ctx.fillRect(-14*size, -2*size, 4*size, 4*size);
+    ctx.fillRect(-18*size, -1*size, 4*size, 2*size);
+    // eye
+    ctx.globalAlpha = 0.9;
+    ctx.fillStyle = "rgba(0,0,0,.45)";
+    ctx.fillRect(9*size, -1*size, 1.6*size, 1.6*size);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
 
-    // desk
-    ctx.fillStyle = isLight ? "rgba(0,0,0,.18)" : "rgba(0,0,0,.35)";
-    ctx.fillRect(0, H*0.78, W, H*0.22);
+  var last = performance.now();
+  function loop(now){
+    var dt = Math.min(0.033, (now-last)/1000);
+    last = now;
+    var t = now/1000;
 
-    // window (shows time-based sky)
-    var winX = W*0.58, winY = H*0.12, winW = W*0.30, winH = H*0.36;
-    ctx.fillStyle = isLight ? "rgba(0,0,0,.16)" : "rgba(255,255,255,.08)";
-    ctx.fillRect(winX-8, winY-8, winW+16, winH+16);
+    var rect = canvas.getBoundingClientRect();
+    var W = rect.width, H = rect.height;
 
-    // sky in window
+    // time
     var hourFloat = sceneHour + sceneMin/60 + sceneSec/3600;
     var sp = skyParams(hourFloat);
-    var g = ctx.createLinearGradient(0,winY,0,winY+winH);
+
+    // background gradient
+    var g = ctx.createLinearGradient(0,0,0,H);
     g.addColorStop(0, "rgb("+(sp.top[0]|0)+","+(sp.top[1]|0)+","+(sp.top[2]|0)+")");
     g.addColorStop(1, "rgb("+(sp.bot[0]|0)+","+(sp.bot[1]|0)+","+(sp.bot[2]|0)+")");
     ctx.fillStyle = g;
-    ctx.fillRect(winX, winY, winW, winH);
+    ctx.fillRect(0,0,W,H);
 
-    // stars in window at night
-    if(sp.nightness > 0.2){
-      var base = clamp((sp.nightness-0.15)/0.9, 0, 1);
+    // stars at night
+    if(sp.nightness > 0.15){
+      var base = clamp((sp.nightness-0.1)/0.9, 0, 1);
       for(var i=0;i<stars.length;i++){
         var st = stars[i];
-        var tw = 0.35 + 0.65*(0.5+0.5*Math.sin(tt*1.2 + st.s));
+        var tw = 0.35 + 0.65*(0.5+0.5*Math.sin(t*1.2 + st.s));
         ctx.globalAlpha = base * 0.65 * tw;
         ctx.fillStyle = "white";
-        ctx.fillRect(winX + st.x*winW, winY + st.y*winH, 2, 2);
+        ctx.fillRect(st.x*W, st.y*H*0.70, 2, 2);
       }
       ctx.globalAlpha = 1;
     }
 
-    // sun/moon in window
+    // sun/moon
     var sunActive = (hourFloat >= 6 && hourFloat < 18);
     var progSun = clamp((hourFloat - 6)/12, 0, 1);
     var progMoon = clamp(((hourFloat >= 18 ? hourFloat : hourFloat+24) - 18)/12, 0, 1);
 
     if(sunActive){
-      var pS = bodyPos(progSun);
+      var pS = arcPos(progSun);
       ctx.globalAlpha = 0.95;
-      ctx.fillStyle = isLight ? "rgba(255,210,120,.95)" : "rgba(255,214,140,.95)";
-      ctx.beginPath(); ctx.arc(winX + pS.x*winW, winY + pS.y*winH, 14, 0, Math.PI*2); ctx.fill();
-      ctx.globalAlpha = 0.22;
-      ctx.beginPath(); ctx.arc(winX + pS.x*winW, winY + pS.y*winH, 36, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "rgba(255,214,140,.95)";
+      ctx.beginPath(); ctx.arc(pS.x*W, pS.y*H, 22, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 0.20;
+      ctx.beginPath(); ctx.arc(pS.x*W, pS.y*H, 60, 0, Math.PI*2); ctx.fill();
       ctx.globalAlpha = 1;
     }else{
-      var pM = bodyPos(progMoon);
+      var pM = arcPos(progMoon);
       ctx.globalAlpha = 0.95;
-      ctx.fillStyle = isLight ? "rgba(255,255,255,.92)" : "rgba(230,240,255,.90)";
-      ctx.beginPath(); ctx.arc(winX + pM.x*winW, winY + pM.y*winH, 12, 0, Math.PI*2); ctx.fill();
-      ctx.globalAlpha = 0.18;
+      ctx.fillStyle = "rgba(235,245,255,.92)";
+      ctx.beginPath(); ctx.arc(pM.x*W, pM.y*H, 18, 0, Math.PI*2); ctx.fill();
+      ctx.globalAlpha = 0.16;
       ctx.fillStyle = "rgba(0,0,0,.25)";
-      ctx.beginPath(); ctx.arc(winX + pM.x*winW+4, winY + pM.y*winH-3, 3, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(pM.x*W+6, pM.y*H-4, 4, 0, Math.PI*2); ctx.fill();
       ctx.globalAlpha = 1;
     }
 
-    // fish swim in window
-    for(var f=0; f<fish.length; f++){
-      var fi = fish[f];
-      fi.x += fi.v * (1/60);
-      if(fi.x > 1.15) fi.x = -0.15;
-      var fx = winX + fi.x*winW;
-      var fy = winY + fi.y*winH + Math.sin(tt*1.2 + f)*6;
-
-      ctx.fillStyle = fi.c;
-      ctx.globalAlpha = 0.9;
-      ctx.fillRect(fx, fy, 10, 4);
-      ctx.fillRect(fx+10, fy+1, 2, 2);
-      ctx.fillRect(fx-2, fy+1, 2, 2);
-      ctx.globalAlpha = 1;
-    }
-
-    // curtains
-    ctx.fillStyle = isLight ? "rgba(0,0,0,.12)" : "rgba(0,0,0,.22)";
-    ctx.fillRect(winX-18, winY-8, 10, winH+16);
-    ctx.fillRect(winX+winW+8, winY-8, 10, winH+16);
-
-    // Girl + cat (pixel art)
-    var scale = Math.min(W,H) / 140; // auto
-    scale = Math.max(4.8, Math.min(7.2, scale));
-
-    var bob = Math.sin(tt*1.2)*2;
-    var blink = (Math.sin(tt*0.9) > 0.985);       // eyes closed sometimes
-    var page  = (Math.sin(tt*0.6) > 0.60);        // page flip
-    var tail  = (Math.sin(tt*1.6) > 0);           // cat tail wag
-
-    // palette (blue-ish like reference vibe)
-    var P = {
-      ".": null,
-      "a": isLight ? "#d7f1ff" : "#bfe7ff",   // light highlight
-      "b": isLight ? "#9fd7ff" : "#87cfff",   // mid blue
-      "c": isLight ? "#4c86b8" : "#3c6ea0",   // dark blue
-      "d": isLight ? "#20324a" : "#18283e",   // deep
-      "s": isLight ? "#f2c9a0" : "#e7b98d",   // skin
-      "h": isLight ? "#2a2a2a" : "#141414",   // hair
-      "p": isLight ? "#ff6aa8" : "#ff6aa8",   // pink accent
-      "k": isLight ? "#2b2b2b" : "#111111",   // cat outline
-      "w": isLight ? "#ffffff" : "#e7eef7"    // white
-    };
-
-    // Girl sprite 28x28 sitting + book
-    var girlOpen = [
-      "............hhhhhhhh............",
-      "...........hhhhhhhhhh...........",
-      "..........hhhhhhhhh..h..........",
-      ".........hhh..hhhh....h.........",
-      "........hh....hhhh.....h........",
-      "........hh....hhhh.....h........",
-      "........hh....hhhh.....h........",
-      ".........hhh..hhhh....h.........",
-      "..........hhhhhhhhhhhhh.........",
-      "...........hhhhhhhhhhh..........",
-      ".............ssssss.............",
-      "............sssss.s.............",
-      "...........ssssssss.............",
-      "...........ss..ss..s............",
-      "...........ss..ss..s............",
-      "............ssssssss............",
-      ".............bbbbbb.............",
-      "............bbbbbbbb............",
-      "...........bbbbbbbbbb...........",
-      "..........bbbbb..bbbbb..........",
-      ".........bbbb......bbbb.........",
-      "........bbbb..wwww..bbbb........",
-      ".......bbbb..wwwwww..bbbb.......",
-      "......bbbb...wwwwww...bbbb......",
-      ".....bbbb....wwwwww....bbbb.....",
-      "....bbbb.....wwwwww.....bbbb....",
-      "....bbbb......wwww......bbbb....",
-      ".....dd........dd........dd....."
-    ];
-
-    // blink version (eyes line)
-    var girlBlink = girlOpen.slice();
-    // we'll just overlay eye line later; keep simple
-
-    // Book page change (slight difference)
-    var book2 = page ? "......bbbb...wwwwww...bbbb......" : "......bbbb...wwwwww...bbbb......";
-
-    // Cat sprite 18x14
-    var catBase = [
-      "..kkkkkkkkkkkkkk..",
-      ".kkk...........kkk.",
-      "kkk.............kkk",
-      "kk...w.....w.....kk",
-      "kk...............kk",
-      "kk......k........kk",
-      "kk...............kk",
-      ".kkk...........kkk.",
-      "..kkkkkkkkkkkkkk..",
-      ".....kkk....kkk....",
-      ".....kk......kk....",
-      ".....kk......kk....",
-      ".....kk......kk....",
-      ".....dd......dd...."
-    ];
-
-    // cat tail (2 frames)
-    var tailOn = tail ? [
-      "........kk....",
-      ".......kk.....",
-      "......kk......"
-    ] : [
-      "......kk......",
-      ".......kk.....",
-      "........kk...."
-    ];
-
-    // draw girl (convert chars to palette)
-    // We'll interpret: h=hair, s=skin, b=clothes, w=book, d=shadow base
-    // Map letters
-    function mapRow(row){
-      return row.replace(/h/g,"h").replace(/s/g,"s").replace(/b/g,"b").replace(/w/g,"w").replace(/d/g,"d");
-    }
-    var gx = W*0.18, gy = H*0.30 + bob;
-    // build mapped grid with palette keys
-    var grid = girlOpen.map(mapRow);
-
-    // draw grid manually with palette:
-    for(var iy=0; iy<grid.length; iy++){
-      var row = grid[iy];
-      for(var ix=0; ix<row.length; ix++){
-        var ch = row.charAt(ix);
-        if(ch===".") continue;
-        var col = P[ch];
-        if(!col) continue;
-        ctx.fillStyle = col;
-        ctx.fillRect(gx + ix*scale, gy + iy*scale, scale, scale);
-      }
-    }
-
-    // eyes: blink or open
-    ctx.fillStyle = "#0b0b0b";
-    if(blink){
-      // line eyes
-      ctx.fillRect(gx + 13*scale, gy + 12*scale, 3*scale, 1*scale);
-      ctx.fillRect(gx + 18*scale, gy + 12*scale, 3*scale, 1*scale);
-    }else{
-      ctx.fillRect(gx + 14*scale, gy + 12*scale, 1*scale, 1*scale);
-      ctx.fillRect(gx + 20*scale, gy + 12*scale, 1*scale, 1*scale);
-    }
-    // small blush
-    ctx.fillStyle = "rgba(255,106,168,.55)";
-    ctx.fillRect(gx + 12*scale, gy + 14*scale, 1*scale, 1*scale);
-    ctx.fillRect(gx + 22*scale, gy + 14*scale, 1*scale, 1*scale);
-
-    // cat
-    var cx = W*0.42, cy = H*0.66 + bob*0.5;
-    // map cat: k outline, w face
-    var catMap = Object.assign({}, P, { "k": P.k, "w": P.w, "d": P.d });
-    drawSprite(catBase, cx, cy, scale, catMap);
-
-    // tail overlay (to the left)
-    ctx.fillStyle = P.k;
-    for(var ty=0; ty<tailOn.length; ty++){
-      for(var tx=0; tx<tailOn[ty].length; tx++){
-        if(tailOn[ty].charAt(tx) === "k"){
-          ctx.fillRect(cx - (tx+2)*scale, cy + (ty+6)*scale, scale, scale);
-        }
-      }
-    }
-
-    // cup (simple)
-    ctx.fillStyle = isLight ? "rgba(255,255,255,.65)" : "rgba(255,255,255,.45)";
-    ctx.fillRect(W*0.78, H*0.73, 18, 14);
-    ctx.fillRect(W*0.80, H*0.71, 14, 3);
-    ctx.globalAlpha = 1;
-
-    // subtle vignette
-    ctx.fillStyle = accent;
+    // subtle fog / vignette
     ctx.globalAlpha = 0.10;
-    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = "black";
+    ctx.fillRect(0, H*0.70, W, H*0.30);
     ctx.globalAlpha = 1;
-  }
 
-  // ====== Loop ======
-  var last = performance.now();
-  function loop(now){
-    var dt = Math.min(0.033, (now-last)/1000);
-    last = now;
+    // fishes (emotive, drifting)
+    for(var j=0; j<fishes.length; j++){
+      var fi = fishes[j];
+      fi.x += fi.v * dt * fi.dir;
+      fi.bob += dt * (0.8 + fi.s*0.3);
 
-    var rect = canvas.getBoundingClientRect();
-    ctx.clearRect(0,0,rect.width, rect.height);
+      // wrap
+      if(fi.dir===1 && fi.x > 1.25) { fi.x = -0.25; fi.y = Math.random()*0.55 + 0.20; }
+      if(fi.dir===-1 && fi.x < -0.25){ fi.x = 1.25; fi.y = Math.random()*0.55 + 0.20; }
 
-    drawGirlScene(rect.width, rect.height, now/1000);
+      var px = fi.x * W;
+      var py = fi.y * H + Math.sin(fi.bob + j)*10;
+      var size = 1.8 * fi.s;
+
+      // depth alpha
+      ctx.globalAlpha = 0.85 - fi.y*0.25;
+      drawFish(px, py, size, fi.dir, fi.c);
+      ctx.globalAlpha = 1;
+    }
+
+    // weather effect (optional)
+    var kind = wxKind(currentWxCode);
+    if(kind==="rain" || kind==="drizzle"){
+      ctx.globalAlpha = 0.28;
+      ctx.strokeStyle = (root.getAttribute("data-theme")==="light") ? "rgba(0,0,0,.22)" : "rgba(255,255,255,.18)";
+      ctx.lineWidth = 2;
+      for(var k=0;k<drops.length;k++){
+        var dr = drops[k];
+        dr.y += dr.v * dt * 0.9;
+        dr.x += 0.06 * dt * (1 + (currentWxWind? currentWxWind/18 : 0));
+        if(dr.y > 1){ dr.y = -Math.random()*0.2; dr.x = Math.random(); }
+        if(dr.x > 1.1) dr.x = -0.1;
+        var x = dr.x*W, y = dr.y*H;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(x+10, y+H*dr.l);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+    if(kind==="snow"){
+      ctx.globalAlpha = 0.55;
+      ctx.fillStyle = (root.getAttribute("data-theme")==="light") ? "rgba(255,255,255,.95)" : "rgba(255,255,255,.80)";
+      for(var q=0;q<flakes.length;q++){
+        var fl = flakes[q];
+        fl.y += fl.v * dt;
+        fl.x += (fl.w * dt) + 0.02*Math.sin(t*0.6 + fl.y*10)*dt;
+        if(fl.y > 1){ fl.y = -Math.random()*0.2; fl.x = Math.random(); }
+        if(fl.x > 1.1) fl.x = -0.1;
+        ctx.fillRect(fl.x*W, fl.y*H, 2, 2);
+      }
+      ctx.globalAlpha = 1;
+    }
 
     requestAnimationFrame(loop);
   }
+
+  // initial clear
   requestAnimationFrame(loop);
 
 })();
