@@ -6,92 +6,133 @@
   <title>Standby</title>
   <style>
     :root{
-      --bg:#0b0f14;
+      --bg:#070b10;
       --fg:#e6edf3;
-      --muted: rgba(230,237,243,.65);
+      --muted: rgba(230,237,243,.68);
       --panel: rgba(255,255,255,.06);
-      --panel2: rgba(255,255,255,.10);
+      --border: rgba(255,255,255,.10);
     }
     html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Display", "Hiragino Sans", "Noto Sans JP", sans-serif;}
     body{overflow:hidden;}
+
     .wrap{
       position:fixed; inset:0;
       display:grid;
-      grid-template-rows:auto 1fr auto;
+      grid-template-rows:auto 1fr;
       padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
       gap:14px;
     }
+
     .top{
       display:flex; align-items:flex-end; justify-content:space-between;
       gap:12px;
     }
+
     .clock{
       font-variant-numeric: tabular-nums;
       letter-spacing: .02em;
       line-height:1;
     }
-    .clock .time{font-size: 64px; font-weight: 700;}
-    .clock .date{margin-top:6px; font-size:16px; color:var(--muted)}
-    .status{
-      padding:10px 12px;
-      border-radius:14px;
-      background: var(--panel);
-      border: 1px solid rgba(255,255,255,.08);
-      min-width: 220px;
+    .clock .time{
+      font-size: 92px;
+      font-weight: 800;
     }
-    .status .label{font-size:12px; color:var(--muted)}
-    .status .task{margin-top:4px; font-size:16px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .clock .date{
+      margin-top:10px;
+      font-size: 18px;
+      color: var(--muted);
+    }
+
+    .rightPanel{
+      display:flex;
+      gap:12px;
+      align-items:stretch;
+    }
+
+    .card{
+      padding:12px 14px;
+      border-radius: 18px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      min-width: 260px;
+    }
+    .card .label{
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 8px;
+    }
+    .weatherRow{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .wxMain{
+      display:flex; align-items:center; gap:10px;
+      min-width: 0;
+    }
+    .wxIcon{
+      font-size: 28px;
+      width: 34px;
+      text-align:center;
+    }
+    .wxText{
+      display:flex; flex-direction:column; gap:2px;
+      min-width: 0;
+    }
+    .wxPlace{
+      font-size: 14px;
+      color: var(--muted);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      max-width: 220px;
+    }
+    .wxTemp{
+      font-size: 22px;
+      font-weight: 750;
+    }
+    .wxDetail{
+      font-size: 12px;
+      color: var(--muted);
+      white-space:nowrap;
+    }
+
+    .btn{
+      appearance:none;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.10);
+      color: var(--fg);
+      padding: 12px 14px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor:pointer;
+      white-space:nowrap;
+      height: fit-content;
+      align-self: end;
+    }
+    .btn:active{transform: translateY(1px);}
+
     .mid{
       position:relative;
-      border-radius: 22px;
-      background: radial-gradient(1200px 500px at 50% 120%, rgba(120,180,255,.18), transparent 60%),
-                  radial-gradient(900px 400px at 20% 120%, rgba(120,255,200,.12), transparent 60%),
-                  radial-gradient(800px 380px at 80% 120%, rgba(255,140,200,.10), transparent 60%),
-                  var(--panel);
+      border-radius: 24px;
+      background:
+        radial-gradient(1200px 520px at 50% 115%, rgba(120,180,255,.18), transparent 60%),
+        radial-gradient(900px 420px at 15% 120%, rgba(120,255,200,.12), transparent 60%),
+        radial-gradient(800px 380px at 85% 120%, rgba(255,140,200,.10), transparent 60%),
+        rgba(255,255,255,.04);
       border: 1px solid rgba(255,255,255,.08);
       overflow:hidden;
     }
     canvas{position:absolute; inset:0; width:100%; height:100%;}
-    .hint{
-      position:absolute; left:14px; bottom:14px;
-      padding:10px 12px;
-      border-radius:14px;
-      background: rgba(0,0,0,.28);
-      border:1px solid rgba(255,255,255,.08);
-      color: rgba(230,237,243,.82);
-      font-size: 13px;
-      backdrop-filter: blur(8px);
+    .corner{
+      position:absolute;
+      right: 14px;
+      bottom: 14px;
+      display:flex;
+      gap:10px;
+      align-items:center;
     }
-    .bottom{
-      display:flex; justify-content:space-between; gap:12px; align-items:center;
-    }
-    .btns{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;}
-    button{
-      appearance:none; border:1px solid rgba(255,255,255,.12);
-      background: var(--panel2);
-      color:var(--fg);
-      padding:12px 14px;
-      border-radius: 14px;
-      font-size: 14px;
-      font-weight: 650;
-      letter-spacing:.01em;
-      cursor:pointer;
-    }
-    button:active{transform: translateY(1px);}
-    .small{font-size:12px; color:var(--muted)}
-    input{
-      width:min(520px, 56vw);
-      padding:12px 12px;
-      border-radius: 14px;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.04);
-      color:var(--fg);
-      outline:none;
-      font-size: 14px;
-    }
+
     @media (max-width: 900px){
-      .clock .time{font-size: 52px;}
-      input{width:min(420px, 54vw);}
+      .clock .time{font-size: 74px;}
+      .card{min-width: 240px;}
     }
   </style>
 </head>
@@ -102,32 +143,35 @@
         <div class="time" id="time">--:--</div>
         <div class="date" id="date">----</div>
       </div>
-      <div class="status">
-        <div class="label">NOW WORKING</div>
-        <div class="task" id="taskText">勉強</div>
+
+      <div class="rightPanel">
+        <div class="card" id="weatherCard">
+          <div class="label">WEATHER</div>
+          <div class="weatherRow">
+            <div class="wxMain">
+              <div class="wxIcon" id="wxIcon">⛅️</div>
+              <div class="wxText">
+                <div class="wxTemp" id="wxTemp">--°C</div>
+                <div class="wxPlace" id="wxPlace">位置情報を許可すると表示</div>
+                <div class="wxDetail" id="wxDetail">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <button class="btn" id="openChatGPT">ChatGPT</button>
       </div>
     </div>
 
     <div class="mid">
       <canvas id="c"></canvas>
-      <div class="hint">タップ：キャラ反転 / スペース：ダッシュ / R：気分で色替え</div>
-    </div>
-
-    <div class="bottom">
-      <div>
-        <input id="task" placeholder="今やること（例：英語・数学・動画編集）" />
-        <div class="small">※入力してEnterで反映（自動保存）</div>
-      </div>
-      <div class="btns">
-        <button id="openChatGPT">ChatGPTを開く</button>
-        <button id="toggleMode">集中モード</button>
-      </div>
+      <div class="corner"></div>
     </div>
   </div>
 
 <script>
 (() => {
-  // ---- Clock ----
+  // ---------- CLOCK ----------
   const timeEl = document.getElementById("time");
   const dateEl = document.getElementById("date");
   const pad = (n)=>String(n).padStart(2,"0");
@@ -139,38 +183,119 @@
   }
   tick(); setInterval(tick, 1000);
 
-  // ---- Task input (localStorage) ----
-  const taskInput = document.getElementById("task");
-  const taskText = document.getElementById("taskText");
-  const key = "standby_task_v1";
-  const saved = localStorage.getItem(key);
-  if(saved){ taskText.textContent = saved; taskInput.value = saved; }
-  taskInput.addEventListener("keydown", (e)=>{
-    if(e.key === "Enter"){
-      const v = taskInput.value.trim() || "勉強";
-      taskText.textContent = v;
-      localStorage.setItem(key, v);
-      taskInput.blur();
-    }
-  });
-
-  // ---- Buttons ----
+  // ---------- BUTTON ----------
   document.getElementById("openChatGPT").addEventListener("click", ()=>{
-    // iPadだと新規タブで開きやすい
     window.open("https://chatgpt.com", "_blank");
   });
 
-  let focusMode = false;
-  const wrap = document.querySelector(".wrap");
-  const top = document.querySelector(".top");
-  const bottom = document.querySelector(".bottom");
-  document.getElementById("toggleMode").addEventListener("click", ()=>{
-    focusMode = !focusMode;
-    top.style.display = focusMode ? "none" : "flex";
-    bottom.style.display = focusMode ? "none" : "flex";
-  });
+  // ---------- WEATHER (Open-Meteo, no API key) ----------
+  const wxIconEl = document.getElementById("wxIcon");
+  const wxTempEl = document.getElementById("wxTemp");
+  const wxPlaceEl = document.getElementById("wxPlace");
+  const wxDetailEl = document.getElementById("wxDetail");
 
-  // ---- Pixel character animation ----
+  function weatherEmoji(code){
+    // Open-Meteo WMO weather code
+    if(code === 0) return "☀️";
+    if([1,2].includes(code)) return "🌤️";
+    if(code === 3) return "☁️";
+    if([45,48].includes(code)) return "🌫️";
+    if([51,53,55,56,57].includes(code)) return "🌦️";
+    if([61,63,65,66,67].includes(code)) return "🌧️";
+    if([71,73,75,77].includes(code)) return "🌨️";
+    if([80,81,82].includes(code)) return "🌧️";
+    if([85,86].includes(code)) return "🌨️";
+    if([95,96,99].includes(code)) return "⛈️";
+    return "⛅️";
+  }
+  function codeText(code){
+    const m = new Map([
+      [0,"快晴"],[1,"晴れ"],[2,"晴れ時々曇り"],[3,"曇り"],
+      [45,"霧"],[48,"霧"],
+      [51,"霧雨(弱)"],[53,"霧雨(中)"],[55,"霧雨(強)"],
+      [56,"凍結霧雨(弱)"],[57,"凍結霧雨(強)"],
+      [61,"雨(弱)"],[63,"雨(中)"],[65,"雨(強)"],
+      [66,"凍結雨(弱)"],[67,"凍結雨(強)"],
+      [71,"雪(弱)"],[73,"雪(中)"],[75,"雪(強)"],[77,"霰(あられ)"],
+      [80,"にわか雨(弱)"],[81,"にわか雨(中)"],[82,"にわか雨(強)"],
+      [85,"にわか雪(弱)"],[86,"にわか雪(強)"],
+      [95,"雷雨"],[96,"雷雨(雹)"],[99,"雷雨(雹)"]
+    ]);
+    return m.get(code) ?? `天気コード ${code}`;
+  }
+
+  async function fetchWeather(lat, lon){
+    // current weather + temp/wind
+    const url =
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+      `&current=temperature_2m,weather_code,wind_speed_10m` +
+      `&timezone=Asia%2FTokyo`;
+    const r = await fetch(url);
+    if(!r.ok) throw new Error("weather fetch failed");
+    return r.json();
+  }
+
+  async function reverseGeocode(lat, lon){
+    // Open-Meteo Geocoding (reverse)
+    const url =
+      `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${lat}&longitude=${lon}&language=ja`;
+    const r = await fetch(url);
+    if(!r.ok) return null;
+    const j = await r.json();
+    const p = j?.results?.[0];
+    if(!p) return null;
+    // 例: "東京都, 日本"
+    const parts = [p.admin1, p.country].filter(Boolean);
+    return parts.join(", ");
+  }
+
+  function setWxLoading(msg){
+    wxPlaceEl.textContent = msg;
+    wxDetailEl.textContent = "—";
+    wxTempEl.textContent = "--°C";
+    wxIconEl.textContent = "⛅️";
+  }
+
+  async function updateWeather(){
+    if(!navigator.geolocation){
+      setWxLoading("このブラウザは位置情報に非対応");
+      return;
+    }
+    setWxLoading("位置情報の許可待ち…");
+    navigator.geolocation.getCurrentPosition(async (pos)=>{
+      try{
+        const lat = pos.coords.latitude;
+        const lon = pos.coords.longitude;
+
+        const [wx, place] = await Promise.all([
+          fetchWeather(lat, lon),
+          reverseGeocode(lat, lon)
+        ]);
+
+        const cur = wx.current;
+        const temp = Math.round(cur.temperature_2m);
+        const code = cur.weather_code;
+        const wind = Math.round(cur.wind_speed_10m);
+
+        wxIconEl.textContent = weatherEmoji(code);
+        wxTempEl.textContent = `${temp}°C`;
+        wxPlaceEl.textContent = place ?? `lat ${lat.toFixed(2)}, lon ${lon.toFixed(2)}`;
+        wxDetailEl.textContent = `${codeText(code)} / 風 ${wind}m/s`;
+
+      }catch(e){
+        setWxLoading("天気の取得に失敗（ネット確認）");
+      }
+    }, (err)=>{
+      // permission denied etc.
+      setWxLoading("位置情報OFF（設定→Safari→位置情報）");
+    }, { enableHighAccuracy:false, timeout:8000, maximumAge: 10*60*1000 });
+  }
+
+  updateWeather();
+  // 10分ごとに更新
+  setInterval(updateWeather, 10*60*1000);
+
+  // ---------- PIXEL CHARACTER ----------
   const canvas = document.getElementById("c");
   const ctx = canvas.getContext("2d", { alpha: true });
 
@@ -184,28 +309,15 @@
   window.addEventListener("resize", resize);
   resize();
 
-  // Simple palette sets
   const palettes = [
-    { body:"#9BE9A8", dark:"#2D6A4F", eye:"#0b0f14", blush:"#FF6B9A" },
-    { body:"#A0C4FF", dark:"#364FC7", eye:"#0b0f14", blush:"#FFB703" },
-    { body:"#FFD6A5", dark:"#E76F51", eye:"#0b0f14", blush:"#FF006E" }
+    { body:"#9BE9A8", dark:"#2D6A4F", eye:"#070b10", blush:"#FF6B9A" },
+    { body:"#A0C4FF", dark:"#364FC7", eye:"#070b10", blush:"#FFB703" },
+    { body:"#FFD6A5", dark:"#E76F51", eye:"#070b10", blush:"#FF006E" }
   ];
   let pal = palettes[0];
 
-  // character state
-  const state = {
-    x: 120, y: 0,
-    vx: 70, // px/s
-    dir: 1,
-    t: 0,
-    dash: 0,
-    hueShift: 0,
-  };
+  const state = { x: 120, y: 0, vx: 70, dir: 1, t: 0 };
 
-  let flip = false;
-
-  // draw a tiny "slime-cat" pixel sprite (16x16) scaled
-  // We'll generate pixels procedurally each frame (fast enough).
   function drawSprite(x, y, scale, frame){
     const s = scale;
     const px = (ix,iy,col)=>{
@@ -213,10 +325,8 @@
       ctx.fillRect(x + ix*s, y + iy*s, s, s);
     };
 
-    // base shape (rounded blob)
     const body = pal.body, dark = pal.dark, eye = pal.eye, blush = pal.blush;
 
-    // 16x16 mask-ish coordinates
     const mask = [
       "....######......",
       "...########.....",
@@ -236,82 +346,64 @@
       "................",
     ];
 
-    // little ear pixels
-    const ears = [
-      {x:5,y:1},{x:10,y:1},{x:4,y:2},{x:11,y:2}
-    ];
+    const ears = [{x:5,y:1},{x:10,y:1},{x:4,y:2},{x:11,y:2}];
+    const legOffset = Math.round(Math.sin(frame*0.08)*1);
+    const legs = [{x:5,y:12+legOffset},{x:10,y:12-legOffset}];
 
-    // legs (bobbing)
-    const legOffset = Math.round(Math.sin(frame*0.8)*1);
-    const legs = [
-      {x:5,y:12+legOffset},{x:10,y:12-legOffset}
-    ];
-
-    // draw body
     for(let iy=0; iy<16; iy++){
       for(let ix=0; ix<16; ix++){
         if(mask[iy][ix] === "#"){
-          // simple shading: darker on lower-right
           const shade = (ix+iy > 18) ? dark : body;
           px(ix,iy,shade);
         }
       }
     }
 
-    // ears
     ears.forEach(p => px(p.x,p.y,dark));
 
-    // eyes blink
-    const blink = (Math.sin(frame*0.12) > 0.985);
+    const blink = (Math.sin(frame*0.015) > 0.993);
     if(!blink){
       px(6,6,eye); px(9,6,eye);
-      // tiny highlight
-      px(6,5,"rgba(255,255,255,.8)");
-      px(9,5,"rgba(255,255,255,.8)");
+      px(6,5,"rgba(255,255,255,.85)");
+      px(9,5,"rgba(255,255,255,.85)");
     }else{
       px(6,6,eye); px(7,6,eye);
       px(9,6,eye); px(10,6,eye);
     }
 
-    // blush
     px(5,8,blush); px(10,8,blush);
 
-    // mouth changes with frame
-    if(Math.sin(frame*0.2) > 0){
+    if(Math.sin(frame*0.03) > 0){
       px(7,9,eye); px(8,9,eye);
     }else{
       px(7,9,eye);
     }
 
-    // legs
     legs.forEach(p => px(p.x,p.y, dark));
   }
 
-  function jitterStars(w,h, t){
-    const n = 60;
+  function stars(W,H,t){
+    const n = 70;
     for(let i=0;i<n;i++){
-      const x = (i*97) % w;
-      const y = (i*173) % h;
+      const x = (i*97) % W;
+      const y = (i*173) % H;
       const tw = (Math.sin(t*0.8 + i)*0.5 + 0.5);
-      ctx.globalAlpha = 0.12 + tw*0.25;
+      ctx.globalAlpha = 0.10 + tw*0.22;
       ctx.fillStyle = "white";
       ctx.fillRect(x, y, 2, 2);
     }
     ctx.globalAlpha = 1;
   }
 
-  // tap to flip direction
-  document.querySelector(".mid").addEventListener("click", ()=>{
-    flip = !flip;
-  });
-
-  // keyboard controls (iPad + Magic Keyboard)
-  window.addEventListener("keydown", (e)=>{
-    if(e.code === "Space"){ state.dash = 0.7; }
-    if(e.key.toLowerCase() === "r"){
+  // long press / double tap to change palette (no on-screen hints)
+  let lastTap = 0;
+  document.querySelector(".mid").addEventListener("touchend", ()=>{
+    const now = Date.now();
+    if(now - lastTap < 350){
       const idx = palettes.indexOf(pal);
       pal = palettes[(idx+1) % palettes.length];
     }
+    lastTap = now;
   });
 
   let last = performance.now();
@@ -323,50 +415,32 @@
     const rect = canvas.getBoundingClientRect();
     const W = rect.width, H = rect.height;
 
-    // clear
     ctx.clearRect(0,0,W,H);
 
-    // subtle ground
-    ctx.globalAlpha = 0.22;
+    // ground line
+    ctx.globalAlpha = 0.20;
     ctx.fillStyle = "white";
-    ctx.fillRect(0, H-42, W, 1);
+    ctx.fillRect(0, H-44, W, 1);
     ctx.globalAlpha = 1;
 
-    jitterStars(W,H, state.t);
+    stars(W,H,state.t);
 
-    // movement
-    const speed = state.vx * (state.dash>0 ? 2.6 : 1);
-    if(state.dash>0) state.dash = Math.max(0, state.dash - dt);
-
-    state.x += speed * dt * state.dir * (flip ? -1 : 1);
-
-    // bounce near edges
+    state.x += state.vx * dt * state.dir;
     const margin = 60;
     if(state.x < margin){ state.x = margin; state.dir = 1; }
     if(state.x > W - margin){ state.x = W - margin; state.dir = -1; }
 
-    // bobbing
     const bob = Math.sin(state.t*3.0)*6;
     state.y = H*0.62 + bob;
 
-    // draw sprite centered
-    const scale = 6; // pixel size
+    const scale = 6;
     const spriteW = 16*scale, spriteH = 16*scale;
+
     ctx.save();
     ctx.translate(state.x, state.y);
-    // mirror by direction
-    const facing = (state.dir * (flip ? -1 : 1)) >= 0 ? 1 : -1;
-    ctx.scale(facing, 1);
-    drawSprite(-spriteW/2, -spriteH/2, scale, now/16);
+    ctx.scale(state.dir >= 0 ? 1 : -1, 1);
+    drawSprite(-spriteW/2, -spriteH/2, scale, now);
     ctx.restore();
-
-    // small trail when dashing
-    if(state.dash>0.01){
-      ctx.globalAlpha = 0.12;
-      ctx.fillStyle = "white";
-      ctx.fillRect(state.x - 140, state.y + 40, 120, 2);
-      ctx.globalAlpha = 1;
-    }
 
     requestAnimationFrame(loop);
   }
