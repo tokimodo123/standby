@@ -103,7 +103,6 @@
       -webkit-tap-highlight-color: transparent;
     }
     .btn:active{transform: translateY(1px);}
-    .btnRow{display:flex; gap:10px; flex-wrap:wrap;}
 
     .midRow{
       display:grid;
@@ -152,27 +151,98 @@
     .handS{stroke: var(--accent); stroke-width: 2; stroke-linecap: round; opacity:.95;}
     .pin{fill: var(--fg); opacity:.9;}
 
-    /* Weather */
-    .wxMain{display:flex; align-items:center; gap:12px;}
-    .wxIcon{font-size:34px; width:40px; text-align:center;}
-    .wxTemp{font-size:30px; font-weight:900; line-height:1;}
-    .wxPlace{margin-top:6px; font-size:14px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .wxDetail{margin-top:6px; font-size:12px; color:var(--muted);}
-    .wxMeta{margin-top:10px; font-size:12px; color:var(--muted); line-height:1.55; white-space:pre-line;}
+    /* Weather (balance fixed) */
+    .wxTop{
+      display:grid;
+      grid-template-columns: auto 1fr;
+      gap:12px;
+      align-items:center;
+      padding-bottom:10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .wxIcon{
+      font-size: 44px;
+      width: 56px;
+      text-align:center;
+      filter: drop-shadow(0 8px 16px var(--shadow));
+    }
+    .wxRight{min-width:0;}
+    .wxTemp{
+      font-size: 34px;
+      font-weight: 900;
+      line-height:1;
+      font-variant-numeric: tabular-nums;
+    }
+    .wxPlace{
+      margin-top:6px;
+      font-size: 14px;
+      color: var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .wxDetail{
+      margin-top:6px;
+      font-size: 12px;
+      color: var(--muted);
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .wxGrid{
+      margin-top:12px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .wxPill{
+      border: 1px solid var(--border);
+      background: var(--panel2);
+      border-radius: 16px;
+      padding:10px 10px;
+      box-sizing:border-box;
+      min-width:0;
+    }
+    .wxPill .k{
+      font-size:11px;
+      color: var(--muted);
+      letter-spacing:.06em;
+    }
+    .wxPill .v{
+      margin-top:4px;
+      font-size:16px;
+      font-weight:900;
+      font-variant-numeric: tabular-nums;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .wxFoot{
+      margin-top:12px;
+      font-size:12px;
+      color: var(--muted);
+    }
 
-    /* Stopwatch */
+    /* Stopwatch: horizontal layout */
+    .swRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      flex-wrap:wrap;
+    }
     .swDisplay{
       font-variant-numeric: tabular-nums;
       font-weight: 900;
       letter-spacing: .02em;
-      font-size: 46px;
+      font-size: 40px;
       line-height:1.1;
-      margin-top: 6px;
+      white-space:nowrap;
     }
-    .swSub{
-      margin-top: 6px;
-      color: var(--muted);
-      font-size: 12px;
+    .swBtns{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
     }
 
     /* RIGHT */
@@ -197,7 +267,7 @@
       .midRow{grid-template-columns: 1fr;}
       .clockSvg{width:min(300px, 44vw);}
       .controls{flex-direction:row;}
-      .swDisplay{font-size: 38px;}
+      .swDisplay{font-size: 34px;}
     }
   </style>
 </head>
@@ -238,26 +308,48 @@
 
           <div class="card">
             <div class="label">WEATHER</div>
-            <div class="wxMain">
+
+            <div class="wxTop">
               <div class="wxIcon" id="wxIcon">⛅️</div>
-              <div>
+              <div class="wxRight">
                 <div class="wxTemp" id="wxTemp">--°C</div>
                 <div class="wxPlace" id="wxPlace">天気取得待ち</div>
                 <div class="wxDetail" id="wxDetail">—</div>
               </div>
             </div>
-            <div class="wxMeta" id="wxMeta">—</div>
+
+            <div class="wxGrid">
+              <div class="wxPill">
+                <div class="k">日の出 / 日の入</div>
+                <div class="v" id="wxSun">—</div>
+              </div>
+              <div class="wxPill">
+                <div class="k">風</div>
+                <div class="v" id="wxWind">—</div>
+              </div>
+              <div class="wxPill">
+                <div class="k">体感</div>
+                <div class="v" id="wxFeels">—</div>
+              </div>
+              <div class="wxPill">
+                <div class="k">湿度</div>
+                <div class="v" id="wxHum">—</div>
+              </div>
+            </div>
+
+            <div class="wxFoot" id="wxUpdated">—</div>
           </div>
         </div>
 
         <div class="card">
           <div class="label">STOPWATCH</div>
-          <div class="swDisplay" id="swText">00:00.00</div>
-          <div class="btnRow" style="margin-top:12px;">
-            <button class="btn" id="swStartStop">Start</button>
-            <button class="btn" id="swReset">Reset</button>
+          <div class="swRow">
+            <div class="swDisplay" id="swText">00:00:00</div>
+            <div class="swBtns">
+              <button class="btn" id="swStartStop">START</button>
+              <button class="btn" id="swReset">RESET</button>
+            </div>
           </div>
-          <div class="swSub" id="swHint">勉強の計測にどうぞ</div>
         </div>
 
         <div style="flex:1"></div>
@@ -282,7 +374,7 @@
 
   // ---- theme ----
   var root = document.documentElement;
-  var themeKey = "standby_theme_v6";
+  var themeKey = "standby_theme_v7";
   function applyTheme(t){
     root.setAttribute("data-theme", t);
     storageSet(themeKey, t);
@@ -312,7 +404,7 @@
   var handM = document.getElementById("handM");
   var handS = document.getElementById("handS");
 
-  // these are used by the right scene too
+  // used by the right scene too
   var sceneHour = 12, sceneMin = 0, sceneSec = 0;
 
   function pad(n){ return (n<10?"0":"")+n; }
@@ -367,7 +459,11 @@
   var wxTempEl = document.getElementById("wxTemp");
   var wxPlaceEl = document.getElementById("wxPlace");
   var wxDetailEl = document.getElementById("wxDetail");
-  var wxMetaEl = document.getElementById("wxMeta");
+  var wxSunEl = document.getElementById("wxSun");
+  var wxWindEl = document.getElementById("wxWind");
+  var wxFeelsEl = document.getElementById("wxFeels");
+  var wxHumEl = document.getElementById("wxHum");
+  var wxUpdatedEl = document.getElementById("wxUpdated");
 
   // for scene effects
   var currentWxCode = null;
@@ -403,7 +499,11 @@
     wxTempEl.textContent = state.tempText || "--°C";
     wxPlaceEl.textContent = state.place || "—";
     wxDetailEl.textContent = state.detail || "—";
-    wxMetaEl.textContent = state.meta || "—";
+    wxSunEl.textContent = state.sun || "—";
+    wxWindEl.textContent = state.windText || "—";
+    wxFeelsEl.textContent = state.feelsText || "—";
+    wxHumEl.textContent = state.humText || "—";
+    wxUpdatedEl.textContent = state.updated || "—";
     wxIconEl.textContent = state.icon || "⛅️";
     if(typeof state.code==="number") currentWxCode = state.code;
     if(typeof state.wind==="number") currentWxWind = state.wind;
@@ -455,12 +555,12 @@
       setWx({
         tempText: temp + "°C",
         place: placeText,
-        detail: codeText(code) + " / 風 " + wind + "m/s",
-        meta:
-          "日の出 " + sunrise + " / 日の入 " + sunset + "\n" +
-          (feels!==null ? ("体感 " + feels + "°C") : "体感 —") + " / " +
-          (hum!==null ? ("湿度 " + hum + "%") : "湿度 —") + "\n" +
-          "最終更新: " + new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}),
+        detail: codeText(code),
+        sun: sunrise + " / " + sunset,
+        windText: wind + "m/s",
+        feelsText: (feels!==null ? (feels + "°C") : "—"),
+        humText: (hum!==null ? (hum + "%") : "—"),
+        updated: "最終更新: " + new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}),
         icon: weatherEmoji(code),
         code: code,
         wind: wind
@@ -486,7 +586,17 @@
   }
 
   function updateWeather(){
-    setWx({ place:"天気取得中…", meta:"—", icon:"⛅️" });
+    setWx({
+      place:"天気取得中…",
+      tempText:"--°C",
+      detail:"—",
+      sun:"—",
+      windText:"—",
+      feelsText:"—",
+      humText:"—",
+      updated:"—",
+      icon:"⛅️"
+    });
 
     var hardTimeout = setTimeout(function(){
       fallbackTokyo("取得が長引いたため東京を表示");
@@ -518,7 +628,7 @@
   updateWeather();
   setInterval(updateWeather, 10*60*1000);
 
-  // ---- STOPWATCH ----
+  // ---- STOPWATCH (HH:MM:SS, horizontal) ----
   var swText = document.getElementById("swText");
   var swStartStop = document.getElementById("swStartStop");
   var swReset = document.getElementById("swReset");
@@ -526,29 +636,33 @@
   var swRunning = false;
   var swBaseMs = 0;
   var swStartAt = 0;
-  var swRAF = 0;
+  var swTimer = 0;
 
-  function fmtStopwatch(ms){
+  function fmtHMS(ms){
     ms = Math.max(0, ms|0);
-    var totalCs = Math.floor(ms/10);
-    var cs = totalCs % 100;
-    var totalSec = Math.floor(totalCs/100);
-    var sec = totalSec % 60;
-    var min = Math.floor(totalSec/60);
-    if(min < 100) return pad(min)+":"+pad(sec)+"."+pad(cs);
-    var hr = Math.floor(min/60);
-    min = min % 60;
-    return pad(hr)+":"+pad(min)+":"+pad(sec);
+    var totalSec = Math.floor(ms/1000);
+    var s = totalSec % 60;
+    var totalMin = Math.floor(totalSec/60);
+    var m = totalMin % 60;
+    var h = Math.floor(totalMin/60);
+    return pad(h)+":"+pad(m)+":"+pad(s);
   }
   function swNowMs(){
     return swRunning ? (swBaseMs + (performance.now() - swStartAt)) : swBaseMs;
   }
   function swRender(){
-    swText.textContent = fmtStopwatch(swNowMs());
-    if(swRunning) swRAF = requestAnimationFrame(swRender);
+    swText.textContent = fmtHMS(swNowMs());
   }
   function swSetButtons(){
-    swStartStop.textContent = swRunning ? "Stop" : "Start";
+    swStartStop.textContent = swRunning ? "STOP" : "START";
+  }
+  function swStartLoop(){
+    clearInterval(swTimer);
+    swTimer = setInterval(swRender, 200); // 軽めに更新
+  }
+  function swStopLoop(){
+    clearInterval(swTimer);
+    swTimer = 0;
   }
 
   swStartStop.addEventListener("click", function(){
@@ -556,14 +670,13 @@
       swRunning = true;
       swStartAt = performance.now();
       swSetButtons();
-      cancelAnimationFrame(swRAF);
-      swRender();
+      swStartLoop();
     }else{
       swBaseMs = swNowMs();
       swRunning = false;
       swSetButtons();
-      cancelAnimationFrame(swRAF);
-      swText.textContent = fmtStopwatch(swBaseMs);
+      swStopLoop();
+      swRender();
     }
   });
 
@@ -571,26 +684,26 @@
     swRunning = false;
     swBaseMs = 0;
     swSetButtons();
-    cancelAnimationFrame(swRAF);
-    swText.textContent = "00:00.00";
+    swStopLoop();
+    swRender();
   });
 
   swSetButtons();
-  swText.textContent = "00:00.00";
+  swRender();
 
-  // ---- RIGHT CANVAS: more emo motion + BIG sun/moon + redesigned fishes ----
+  // ---- RIGHT CANVAS: emo motion + BIG sun/moon + redesigned fishes ----
   var canvas = document.getElementById("scene");
   var ctx = canvas.getContext("2d", {alpha:true});
 
-  function resize(){
+  function resizeScene(){
     var r = window.devicePixelRatio || 1;
     var rect = canvas.getBoundingClientRect();
     canvas.width = Math.floor(rect.width * r);
     canvas.height= Math.floor(rect.height* r);
     ctx.setTransform(r,0,0,r,0,0);
   }
-  window.addEventListener("resize", resize);
-  resize();
+  window.addEventListener("resize", resizeScene);
+  resizeScene();
 
   function lerp(a,b,t){ return a+(b-a)*t; }
   function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
@@ -700,7 +813,6 @@
     grad.addColorStop(0, rgb(c2, 0.90));
     grad.addColorStop(1, rgb(c1, 0.90));
 
-    // soft shadow
     ctx.globalAlpha = 0.20;
     ctx.fillStyle = "rgba(0,0,0,.35)";
     ctx.beginPath();
@@ -708,19 +820,16 @@
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    // body
     ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.ellipse(0, 0, w*0.45, h*0.52, 0, 0, Math.PI*2);
     ctx.fill();
 
-    // highlight
     ctx.fillStyle = "rgba(255,255,255,.18)";
     ctx.beginPath();
     ctx.ellipse(w*0.18, -h*0.10, w*0.18, h*0.18, 0.2, 0, Math.PI*2);
     ctx.fill();
 
-    // dorsal fin
     ctx.fillStyle = rgb(c2, 0.55);
     ctx.beginPath();
     ctx.moveTo(-w*0.05, -h*0.45);
@@ -729,7 +838,6 @@
     ctx.closePath();
     ctx.fill();
 
-    // side fin
     ctx.fillStyle = rgb(c2, 0.40);
     ctx.beginPath();
     ctx.moveTo(w*0.02, h*0.08);
@@ -738,7 +846,6 @@
     ctx.closePath();
     ctx.fill();
 
-    // tail
     ctx.fillStyle = rgb(c1, 0.80);
     ctx.beginPath();
     ctx.moveTo(-w*0.42, 0);
@@ -754,7 +861,6 @@
     ctx.closePath();
     ctx.fill();
 
-    // eye
     ctx.fillStyle = "rgba(0,0,0,.35)";
     ctx.beginPath();
     ctx.arc(w*0.22, -h*0.05, 2.4*size, 0, Math.PI*2);
@@ -802,7 +908,7 @@
     ctx.fillStyle = g;
     ctx.fillRect(0,0,W,H);
 
-    // breathing color veil (emo)
+    // breathing veil
     var pulse = 0.08 + 0.06*(0.5+0.5*Math.sin(t*0.35));
     ctx.globalAlpha = pulse;
     var g2 = ctx.createLinearGradient(0, H*0.15 + Math.sin(t*0.2)*18, W, H*0.85);
@@ -869,7 +975,7 @@
       ctx.globalAlpha = 1;
     }
 
-    // dreamy mist bands
+    // mist bands
     ctx.globalAlpha = 0.10;
     for(var m=0; m<6; m++){
       var yy = H*(0.20 + m*0.12) + Math.sin(t*0.25 + m)*18;
@@ -971,7 +1077,7 @@
       ctx.globalAlpha = 1;
     }
 
-    // vignette (emo)
+    // vignette
     ctx.globalAlpha = 0.14;
     var vg = ctx.createRadialGradient(W*0.55, H*0.45, 50, W*0.55, H*0.45, Math.max(W,H)*0.85);
     vg.addColorStop(0, "rgba(0,0,0,0)");
