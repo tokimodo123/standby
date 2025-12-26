@@ -108,7 +108,7 @@
       border: 1px solid var(--border);
       padding:14px;
       box-sizing:border-box;
-      min-height: 170px;
+      min-height: 180px;
     }
     .label{
       font-size: 12px;
@@ -122,6 +122,7 @@
       justify-content:center;
       height: calc(100% - 22px);
     }
+
     .clockSvg{
       width: min(280px, 22vw);
       height: auto;
@@ -142,9 +143,10 @@
     html[data-theme="light"] .tick{stroke: rgba(0,0,0,.30);}
     html[data-theme="light"] .tickBig{stroke: rgba(0,0,0,.45);}
 
-    .handH{stroke: var(--fg); stroke-width: 8; stroke-linecap: round;}
-    .handM{stroke: var(--fg); stroke-width: 6; stroke-linecap: round; opacity:.95;}
-    .handS{stroke: var(--accent); stroke-width: 3; stroke-linecap: round; opacity:.95;}
+    /* 針を細く */
+    .handH{stroke: var(--fg); stroke-width: 5; stroke-linecap: round;}
+    .handM{stroke: var(--fg); stroke-width: 4; stroke-linecap: round; opacity:.95;}
+    .handS{stroke: var(--accent); stroke-width: 2; stroke-linecap: round; opacity:.95;}
     .pin{fill: var(--fg); opacity:.9;}
 
     .wxMain{display:flex; align-items:center; gap:12px;}
@@ -152,7 +154,7 @@
     .wxTemp{font-size:30px; font-weight:900; line-height:1;}
     .wxPlace{margin-top:6px; font-size:14px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
     .wxDetail{margin-top:6px; font-size:12px; color:var(--muted);}
-    .wxMeta{margin-top:12px; font-size:12px; color:var(--muted);}
+    .wxMeta{margin-top:10px; font-size:12px; color:var(--muted); line-height:1.55;}
 
     /* RIGHT */
     #scene{position:absolute; inset:0; width:100%; height:100%;}
@@ -237,16 +239,12 @@
 
 <script>
 (function(){
-  // ====== Safe storage (iOSで例外が出ても止まらない) ======
-  function storageGet(key){
-    try { return localStorage.getItem(key); } catch(e){ return null; }
-  }
-  function storageSet(key, val){
-    try { localStorage.setItem(key, val); } catch(e){}
-  }
+  // ====== Safe storage ======
+  function storageGet(key){ try { return localStorage.getItem(key); } catch(e){ return null; } }
+  function storageSet(key, val){ try { localStorage.setItem(key, val); } catch(e){} }
 
   // ====== Theme ======
-  var themeKey = "standby_theme_v3";
+  var themeKey = "standby_theme_v4";
   var root = document.documentElement;
   function applyTheme(t){
     root.setAttribute("data-theme", t);
@@ -254,9 +252,8 @@
     document.getElementById("themeBtn").textContent = (t === "light") ? "ダーク" : "ホワイト";
   }
   var saved = storageGet(themeKey);
-  if(saved){
-    applyTheme(saved);
-  }else{
+  if(saved) applyTheme(saved);
+  else {
     var prefersLight = false;
     try { prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches; } catch(e){}
     applyTheme(prefersLight ? "light" : "dark");
@@ -282,10 +279,7 @@
   function pad(n){ return (n<10 ? "0" : "") + n; }
   var dow = ["日","月","火","水","木","金","土"];
 
-  function rot(el, deg){
-    // SVG rotate uses element origin (0,0) inside translated group
-    el.setAttribute("transform", "rotate(" + deg + ")");
-  }
+  function rot(el, deg){ el.setAttribute("transform", "rotate(" + deg + ")"); }
 
   // ticks create once
   (function(){
@@ -332,14 +326,14 @@
   tick();
   setInterval(tick, 1000);
 
-  // ====== Weather (必ず終わる・必ず表示される) ======
+  // ====== Weather ======
   var wxIconEl = document.getElementById("wxIcon");
   var wxTempEl = document.getElementById("wxTemp");
   var wxPlaceEl = document.getElementById("wxPlace");
   var wxDetailEl = document.getElementById("wxDetail");
   var wxMetaEl = document.getElementById("wxMeta");
 
-  var currentWxCode = null; // for scene
+  var currentWxCode = null;
   var currentWxWind = 0;
 
   function weatherEmoji(code){
@@ -374,8 +368,8 @@
     wxDetailEl.textContent = state.detail || "—";
     wxMetaEl.textContent = state.meta || "—";
     wxIconEl.textContent = state.icon || "⛅️";
-    currentWxCode = (typeof state.code === "number") ? state.code : currentWxCode;
-    currentWxWind = (typeof state.wind === "number") ? state.wind : currentWxWind;
+    if(typeof state.code === "number") currentWxCode = state.code;
+    if(typeof state.wind === "number") currentWxWind = state.wind;
   }
 
   function fetchWithTimeout(url, ms){
@@ -407,25 +401,45 @@
     });
   }
 
+  function fmtHHMM(iso){
+    // "2025-12-26T06:45" -> "06:45"
+    if(!iso) return "—";
+    var t = iso.split("T")[1] || "";
+    return t.slice(0,5) || "—";
+  }
+
   function updateWeatherWithCoords(lat, lon, placeText){
     var url =
       "https://api.open-meteo.com/v1/forecast?latitude="+lat+
       "&longitude="+lon+
-      "&current=temperature_2m,weather_code,wind_speed_10m"+
+      "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m"+
+      "&daily=sunrise,sunset"+
+      "&forecast_days=1"+
       "&timezone=Asia%2FTokyo";
 
     return fetchWithTimeout(url, 9000).then(function(wx){
       var cur = wx && wx.current ? wx.current : null;
       if(!cur) throw new Error("baddata");
+
       var temp = Math.round(cur.temperature_2m);
+      var feels= (typeof cur.apparent_temperature === "number") ? Math.round(cur.apparent_temperature) : null;
+      var hum  = (typeof cur.relative_humidity_2m === "number") ? Math.round(cur.relative_humidity_2m) : null;
+
       var code = cur.weather_code;
       var wind = Math.round(cur.wind_speed_10m);
+
+      var sunrise = (wx.daily && wx.daily.sunrise && wx.daily.sunrise[0]) ? fmtHHMM(wx.daily.sunrise[0]) : "—";
+      var sunset  = (wx.daily && wx.daily.sunset  && wx.daily.sunset[0])  ? fmtHHMM(wx.daily.sunset[0])  : "—";
 
       setWx({
         tempText: temp + "°C",
         place: placeText,
         detail: codeText(code) + " / 風 " + wind + "m/s",
-        meta: "最終更新: " + new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}),
+        meta:
+          "日の出 " + sunrise + " / 日の入 " + sunset + "\n" +
+          (feels!==null ? ("体感 " + feels + "°C") : "体感 —") + " / " +
+          (hum!==null ? ("湿度 " + hum + "%") : "湿度 —") + "\n" +
+          "最終更新: " + new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}),
         icon: weatherEmoji(code),
         code: code,
         wind: wind
@@ -447,21 +461,18 @@
   }
 
   function fallbackTokyo(reason){
-    // 東京駅付近
     return updateWeatherWithCoords(35.681236, 139.767125, "東京（" + reason + "）");
   }
 
   function updateWeather(){
     setWx({ place:"天気取得中…", meta:"—", icon:"⛅️" });
 
-    // 絶対に「取得中…」で固まらないための保険
     var hardTimeout = setTimeout(function(){
       fallbackTokyo("取得が長引いたため東京を表示");
     }, 12000);
 
     function finish(){ clearTimeout(hardTimeout); }
 
-    // geolocation → reverseGeocode → weather
     if(!navigator.geolocation){
       fallbackTokyo("位置情報非対応").then(finish).catch(finish);
       return;
@@ -472,7 +483,8 @@
       var lon = pos.coords.longitude;
 
       reverseGeocode(lat, lon).then(function(place){
-        var label = place || ("lat " + lat.toFixed(2) + ", lon " + lon.toFixed(2));
+        // ここがポイント：英語 lat/lon を日本語に
+        var label = place || ("緯度 " + lat.toFixed(2) + " / 経度 " + lon.toFixed(2));
         return updateWeatherWithCoords(lat, lon, label);
       }).then(finish).catch(function(){
         fallbackTokyo("天気API失敗").then(finish).catch(finish);
@@ -484,14 +496,11 @@
     }, { enableHighAccuracy:false, timeout:8000, maximumAge: 10*60*1000 });
   }
 
-  document.getElementById("wxBtn").addEventListener("click", function(){
-    updateWeather();
-  });
-
+  document.getElementById("wxBtn").addEventListener("click", updateWeather);
   updateWeather();
   setInterval(updateWeather, 10*60*1000);
 
-  // ====== Right Scene ======
+  // ====== Right Scene (cute pixel girl + cat + window fish, time-based sky) ======
   var canvas = document.getElementById("scene");
   var ctx = canvas.getContext("2d", {alpha:true});
 
@@ -508,149 +517,23 @@
   function lerp(a,b,t){ return a+(b-a)*t; }
   function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
 
-  function wxKind(code){
-    if(code == null) return "unknown";
-    if(code===0||code===1) return "clear";
-    if(code===2||code===3) return "cloudy";
-    if(code===45||code===48) return "fog";
-    if(code===51||code===53||code===55||code===56||code===57) return "drizzle";
-    if(code===61||code===63||code===65||code===66||code===67||code===80||code===81||code===82||code===95||code===96||code===99) return "rain";
-    if(code===71||code===73||code===75||code===77||code===85||code===86) return "snow";
-    return "cloudy";
-  }
-
-  // stars
-  var stars = [];
-  for(var i=0;i<120;i++){
-    stars.push({x:((i*97)%1000)/1000, y:((i*173)%1000)/1000, s:((i*37)%7)+1});
-  }
-  // clouds
-  var clouds = [];
-  for(var c=0;c<9;c++){
-    clouds.push({x:Math.random()*1.2-0.1, y:Math.random()*0.35+0.08, v:0.010+Math.random()*0.02, w:0.18+Math.random()*0.18});
-  }
-  // rain drops
-  var drops = [];
-  for(var d=0; d<190; d++){
-    drops.push({x:Math.random(), y:Math.random(), v:0.8+Math.random()*1.2, l:0.015+Math.random()*0.02});
-  }
-  // snow flakes
-  var flakes = [];
-  for(var f=0; f<150; f++){
-    flakes.push({x:Math.random(), y:Math.random(), v:0.12+Math.random()*0.25, s:0.004+Math.random()*0.008, w:(Math.random()*2-1)*0.10});
-  }
-
-  // walking human (pixel)
-  function drawHuman(px, py, scale, frame, facing){
-    var s = scale;
-    function pixel(ix,iy,col){
-      ctx.fillStyle = col;
-      ctx.fillRect(px + ix*s, py + iy*s, s, s);
-    }
-
-    var isLight = (root.getAttribute("data-theme")==="light");
-    var skin = isLight ? "#F2C9A0" : "#E7B98D";
-    var hair = isLight ? "#2b2b2b" : "#141414";
-    var shirt= isLight ? "#4f8cff" : "#6aa7ff";
-    var pants= isLight ? "#2e3a4f" : "#1c2738";
-    var shoe = isLight ? "#111" : "#090909";
-    var bag  = isLight ? "#ffb703" : "#ffd166";
-
-    var step = (Math.floor(frame)%2);
-
-    // head (16x5)
-    var head = [
-      "....######......",
-      "...########.....",
-      "...########.....",
-      "...########.....",
-      "....######......"
-    ];
-    // body (16x6)
-    var body = [
-      "....####........",
-      "...######.......",
-      "...######.......",
-      "...######.......",
-      "...######.......",
-      "....####........"
-    ];
-    // legs
-    var legA = [
-      "..##....##......",
-      "..##....##......",
-      "..##....##......",
-      "..##....##......",
-      "..##....##......",
-      "..##....##......"
-    ];
-    var legB = [
-      "..##....##......",
-      "..##....##......",
-      "..##....##......",
-      "..##....##......",
-      "..##....##......",
-      "...##..##......."
-    ];
-    var legs = (step===0) ? legA : legB;
-
-    // draw
-    for(var y=0; y<head.length; y++){
-      for(var x=0; x<16; x++){
-        if(head[y].charAt(x)==="#"){
-          var col = (y<=1) ? hair : skin;
-          pixel(x,y,col);
-        }
-      }
-    }
-    // eyes
-    pixel(6,2,"#0b0b0b"); pixel(9,2,"#0b0b0b");
-
-    var by0 = 6;
-    for(var y2=0; y2<body.length; y2++){
-      for(var x2=0; x2<16; x2++){
-        if(body[y2].charAt(x2)==="#") pixel(x2, by0+y2, shirt);
-      }
-    }
-    // arms
-    pixel(4,8,skin); pixel(11,8,skin);
-    pixel(3,9,skin); pixel(12,9,skin);
-
-    // waist
-    pixel(6,12,pants); pixel(7,12,pants); pixel(8,12,pants); pixel(9,12,pants);
-
-    var ly0 = 13;
-    for(var y3=0; y3<legs.length; y3++){
-      for(var x3=0; x3<16; x3++){
-        if(legs[y3].charAt(x3)==="#") pixel(x3, ly0+y3, pants);
-      }
-    }
-    // shoes
-    pixel(5,ly0+5,shoe); pixel(10,ly0+5,shoe);
-
-    // bag
-    pixel(2,9,bag); pixel(2,10,bag);
-  }
-
   function skyParams(h){
-    // 0..24
-    var nightTop=[12,16,28], nightBot=[8,10,18];
-    var mornTop=[120,175,255], mornBot=[240,210,160];
+    var nightTop=[18,16,34], nightBot=[12,10,22];
+    var mornTop=[110,175,255], mornBot=[210,235,255];
     var dayTop =[80,170,255], dayBot =[200,240,255];
-    var setTop =[255,140,120], setBot=[80,50,120];
+    var setTop =[235,110,140], setBot=[65,40,90];
 
     function mix(c1,c2,k){
       return [lerp(c1[0],c2[0],k), lerp(c1[1],c2[1],k), lerp(c1[2],c2[2],k)];
     }
 
     var top, bot, nightness;
-    if(h<5){
-      top=nightTop; bot=nightBot; nightness=1;
-    }else if(h<9){
-      var k1=(h-5)/4;
-      top=mix(nightTop,mornTop,k1);
-      bot=mix(nightBot,mornBot,k1);
-      nightness=1-k1;
+    if(h<5){ top=nightTop; bot=nightBot; nightness=1; }
+    else if(h<9){
+      var k=(h-5)/4;
+      top=mix(nightTop,mornTop,k);
+      bot=mix(nightBot,mornBot,k);
+      nightness=1-k;
     }else if(h<16){
       var k2=(h-9)/7;
       top=mix(mornTop,dayTop,k2);
@@ -660,179 +543,305 @@
       var k3=(h-16)/3;
       top=mix(dayTop,setTop,k3);
       bot=mix(dayBot,setBot,k3);
-      nightness=k3*0.6;
+      nightness=k3*0.55;
     }else{
       var k4=(h-19)/5;
       top=mix(setTop,nightTop,clamp(k4,0,1));
       bot=mix(setBot,nightBot,clamp(k4,0,1));
-      nightness=0.6+0.4*clamp(k4,0,1);
+      nightness=0.55+0.45*clamp(k4,0,1);
     }
     return {top:top, bot:bot, nightness:nightness};
   }
 
   function bodyPos(p){
-    // arc from left->right, highest in middle
-    var x = lerp(0.08, 0.92, p);
-    var y = 0.60 - Math.sin(p*Math.PI)*0.42;
-    return {x:x, y:y};
+    var x = lerp(0.12, 0.88, p);
+    var y = 0.62 - Math.sin(p*Math.PI)*0.42;
+    return {x:x,y:y};
   }
 
-  var dude = { x:0.25, y:0.70, v:0.06, dir:1 };
-  var t = 0;
+  // tiny stars (for window only)
+  var stars = [];
+  for(var i=0;i<120;i++){
+    stars.push({x:((i*97)%1000)/1000, y:((i*173)%1000)/1000, s:((i*37)%7)+1});
+  }
 
-  function draw(dt){
-    t += dt;
-    var rect = canvas.getBoundingClientRect();
-    var W = rect.width, H = rect.height;
+  // fish
+  var fish = [
+    {x:0.15,y:0.28,v:0.030, c:"#ff6aa8"},
+    {x:0.65,y:0.24,v:0.022, c:"#a98bff"},
+    {x:0.42,y:0.33,v:0.018, c:"#ffb86b"}
+  ];
 
+  // pixel draw helper
+  function drawSprite(grid, x, y, scale, map){
+    for(var iy=0; iy<grid.length; iy++){
+      var row = grid[iy];
+      for(var ix=0; ix<row.length; ix++){
+        var ch = row.charAt(ix);
+        if(ch === ".") continue;
+        var col = map[ch];
+        if(!col) continue;
+        ctx.fillStyle = col;
+        ctx.fillRect(x + ix*scale, y + iy*scale, scale, scale);
+      }
+    }
+  }
+
+  // Cute girl+cat scene (original pixel art)
+  // まばたき/猫しっぽ/ページめくり：frameで切替
+  function drawGirlScene(W,H,tt){
+    var isLight = (root.getAttribute("data-theme")==="light");
+    var accent = isLight ? "rgba(0,0,0,.18)" : "rgba(0,0,0,.28)";
+
+    // room base
+    ctx.fillStyle = isLight ? "rgba(255,255,255,.06)" : "rgba(0,0,0,.14)";
+    ctx.fillRect(0,0,W,H);
+
+    // desk
+    ctx.fillStyle = isLight ? "rgba(0,0,0,.18)" : "rgba(0,0,0,.35)";
+    ctx.fillRect(0, H*0.78, W, H*0.22);
+
+    // window (shows time-based sky)
+    var winX = W*0.58, winY = H*0.12, winW = W*0.30, winH = H*0.36;
+    ctx.fillStyle = isLight ? "rgba(0,0,0,.16)" : "rgba(255,255,255,.08)";
+    ctx.fillRect(winX-8, winY-8, winW+16, winH+16);
+
+    // sky in window
     var hourFloat = sceneHour + sceneMin/60 + sceneSec/3600;
     var sp = skyParams(hourFloat);
-
-    // background gradient
-    var g = ctx.createLinearGradient(0,0,0,H);
+    var g = ctx.createLinearGradient(0,winY,0,winY+winH);
     g.addColorStop(0, "rgb("+(sp.top[0]|0)+","+(sp.top[1]|0)+","+(sp.top[2]|0)+")");
     g.addColorStop(1, "rgb("+(sp.bot[0]|0)+","+(sp.bot[1]|0)+","+(sp.bot[2]|0)+")");
     ctx.fillStyle = g;
-    ctx.fillRect(0,0,W,H);
+    ctx.fillRect(winX, winY, winW, winH);
 
-    // stars
-    if(sp.nightness > 0.15){
-      var base = clamp((sp.nightness-0.1)/0.9, 0, 1);
+    // stars in window at night
+    if(sp.nightness > 0.2){
+      var base = clamp((sp.nightness-0.15)/0.9, 0, 1);
       for(var i=0;i<stars.length;i++){
         var st = stars[i];
-        var tw = 0.35 + 0.65*(0.5+0.5*Math.sin(t*1.2 + st.s));
+        var tw = 0.35 + 0.65*(0.5+0.5*Math.sin(tt*1.2 + st.s));
         ctx.globalAlpha = base * 0.65 * tw;
         ctx.fillStyle = "white";
-        ctx.fillRect(st.x*W, st.y*H*0.65, 2, 2);
+        ctx.fillRect(winX + st.x*winW, winY + st.y*winH, 2, 2);
       }
       ctx.globalAlpha = 1;
     }
 
-    // sun/moon positions
+    // sun/moon in window
     var sunActive = (hourFloat >= 6 && hourFloat < 18);
     var progSun = clamp((hourFloat - 6)/12, 0, 1);
     var progMoon = clamp(((hourFloat >= 18 ? hourFloat : hourFloat+24) - 18)/12, 0, 1);
-
-    var isLight = (root.getAttribute("data-theme")==="light");
 
     if(sunActive){
       var pS = bodyPos(progSun);
       ctx.globalAlpha = 0.95;
       ctx.fillStyle = isLight ? "rgba(255,210,120,.95)" : "rgba(255,214,140,.95)";
-      ctx.beginPath(); ctx.arc(pS.x*W, pS.y*H, 22, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(winX + pS.x*winW, winY + pS.y*winH, 14, 0, Math.PI*2); ctx.fill();
       ctx.globalAlpha = 0.22;
-      ctx.beginPath(); ctx.arc(pS.x*W, pS.y*H, 55, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(winX + pS.x*winW, winY + pS.y*winH, 36, 0, Math.PI*2); ctx.fill();
       ctx.globalAlpha = 1;
     }else{
       var pM = bodyPos(progMoon);
       ctx.globalAlpha = 0.95;
       ctx.fillStyle = isLight ? "rgba(255,255,255,.92)" : "rgba(230,240,255,.90)";
-      ctx.beginPath(); ctx.arc(pM.x*W, pM.y*H, 18, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(winX + pM.x*winW, winY + pM.y*winH, 12, 0, Math.PI*2); ctx.fill();
       ctx.globalAlpha = 0.18;
       ctx.fillStyle = "rgba(0,0,0,.25)";
-      ctx.beginPath(); ctx.arc(pM.x*W+6, pM.y*H-4, 4, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(winX + pM.x*winW+4, winY + pM.y*winH-3, 3, 0, Math.PI*2); ctx.fill();
       ctx.globalAlpha = 1;
     }
 
-    // ground
-    ctx.globalAlpha = 0.18;
-    ctx.fillStyle = isLight ? "rgba(0,0,0,.52)" : "rgba(0,0,0,.65)";
-    ctx.fillRect(0, H*0.78, W, H*0.22);
+    // fish swim in window
+    for(var f=0; f<fish.length; f++){
+      var fi = fish[f];
+      fi.x += fi.v * (1/60);
+      if(fi.x > 1.15) fi.x = -0.15;
+      var fx = winX + fi.x*winW;
+      var fy = winY + fi.y*winH + Math.sin(tt*1.2 + f)*6;
+
+      ctx.fillStyle = fi.c;
+      ctx.globalAlpha = 0.9;
+      ctx.fillRect(fx, fy, 10, 4);
+      ctx.fillRect(fx+10, fy+1, 2, 2);
+      ctx.fillRect(fx-2, fy+1, 2, 2);
+      ctx.globalAlpha = 1;
+    }
+
+    // curtains
+    ctx.fillStyle = isLight ? "rgba(0,0,0,.12)" : "rgba(0,0,0,.22)";
+    ctx.fillRect(winX-18, winY-8, 10, winH+16);
+    ctx.fillRect(winX+winW+8, winY-8, 10, winH+16);
+
+    // Girl + cat (pixel art)
+    var scale = Math.min(W,H) / 140; // auto
+    scale = Math.max(4.8, Math.min(7.2, scale));
+
+    var bob = Math.sin(tt*1.2)*2;
+    var blink = (Math.sin(tt*0.9) > 0.985);       // eyes closed sometimes
+    var page  = (Math.sin(tt*0.6) > 0.60);        // page flip
+    var tail  = (Math.sin(tt*1.6) > 0);           // cat tail wag
+
+    // palette (blue-ish like reference vibe)
+    var P = {
+      ".": null,
+      "a": isLight ? "#d7f1ff" : "#bfe7ff",   // light highlight
+      "b": isLight ? "#9fd7ff" : "#87cfff",   // mid blue
+      "c": isLight ? "#4c86b8" : "#3c6ea0",   // dark blue
+      "d": isLight ? "#20324a" : "#18283e",   // deep
+      "s": isLight ? "#f2c9a0" : "#e7b98d",   // skin
+      "h": isLight ? "#2a2a2a" : "#141414",   // hair
+      "p": isLight ? "#ff6aa8" : "#ff6aa8",   // pink accent
+      "k": isLight ? "#2b2b2b" : "#111111",   // cat outline
+      "w": isLight ? "#ffffff" : "#e7eef7"    // white
+    };
+
+    // Girl sprite 28x28 sitting + book
+    var girlOpen = [
+      "............hhhhhhhh............",
+      "...........hhhhhhhhhh...........",
+      "..........hhhhhhhhh..h..........",
+      ".........hhh..hhhh....h.........",
+      "........hh....hhhh.....h........",
+      "........hh....hhhh.....h........",
+      "........hh....hhhh.....h........",
+      ".........hhh..hhhh....h.........",
+      "..........hhhhhhhhhhhhh.........",
+      "...........hhhhhhhhhhh..........",
+      ".............ssssss.............",
+      "............sssss.s.............",
+      "...........ssssssss.............",
+      "...........ss..ss..s............",
+      "...........ss..ss..s............",
+      "............ssssssss............",
+      ".............bbbbbb.............",
+      "............bbbbbbbb............",
+      "...........bbbbbbbbbb...........",
+      "..........bbbbb..bbbbb..........",
+      ".........bbbb......bbbb.........",
+      "........bbbb..wwww..bbbb........",
+      ".......bbbb..wwwwww..bbbb.......",
+      "......bbbb...wwwwww...bbbb......",
+      ".....bbbb....wwwwww....bbbb.....",
+      "....bbbb.....wwwwww.....bbbb....",
+      "....bbbb......wwww......bbbb....",
+      ".....dd........dd........dd....."
+    ];
+
+    // blink version (eyes line)
+    var girlBlink = girlOpen.slice();
+    // we'll just overlay eye line later; keep simple
+
+    // Book page change (slight difference)
+    var book2 = page ? "......bbbb...wwwwww...bbbb......" : "......bbbb...wwwwww...bbbb......";
+
+    // Cat sprite 18x14
+    var catBase = [
+      "..kkkkkkkkkkkkkk..",
+      ".kkk...........kkk.",
+      "kkk.............kkk",
+      "kk...w.....w.....kk",
+      "kk...............kk",
+      "kk......k........kk",
+      "kk...............kk",
+      ".kkk...........kkk.",
+      "..kkkkkkkkkkkkkk..",
+      ".....kkk....kkk....",
+      ".....kk......kk....",
+      ".....kk......kk....",
+      ".....kk......kk....",
+      ".....dd......dd...."
+    ];
+
+    // cat tail (2 frames)
+    var tailOn = tail ? [
+      "........kk....",
+      ".......kk.....",
+      "......kk......"
+    ] : [
+      "......kk......",
+      ".......kk.....",
+      "........kk...."
+    ];
+
+    // draw girl (convert chars to palette)
+    // We'll interpret: h=hair, s=skin, b=clothes, w=book, d=shadow base
+    // Map letters
+    function mapRow(row){
+      return row.replace(/h/g,"h").replace(/s/g,"s").replace(/b/g,"b").replace(/w/g,"w").replace(/d/g,"d");
+    }
+    var gx = W*0.18, gy = H*0.30 + bob;
+    // build mapped grid with palette keys
+    var grid = girlOpen.map(mapRow);
+
+    // draw grid manually with palette:
+    for(var iy=0; iy<grid.length; iy++){
+      var row = grid[iy];
+      for(var ix=0; ix<row.length; ix++){
+        var ch = row.charAt(ix);
+        if(ch===".") continue;
+        var col = P[ch];
+        if(!col) continue;
+        ctx.fillStyle = col;
+        ctx.fillRect(gx + ix*scale, gy + iy*scale, scale, scale);
+      }
+    }
+
+    // eyes: blink or open
+    ctx.fillStyle = "#0b0b0b";
+    if(blink){
+      // line eyes
+      ctx.fillRect(gx + 13*scale, gy + 12*scale, 3*scale, 1*scale);
+      ctx.fillRect(gx + 18*scale, gy + 12*scale, 3*scale, 1*scale);
+    }else{
+      ctx.fillRect(gx + 14*scale, gy + 12*scale, 1*scale, 1*scale);
+      ctx.fillRect(gx + 20*scale, gy + 12*scale, 1*scale, 1*scale);
+    }
+    // small blush
+    ctx.fillStyle = "rgba(255,106,168,.55)";
+    ctx.fillRect(gx + 12*scale, gy + 14*scale, 1*scale, 1*scale);
+    ctx.fillRect(gx + 22*scale, gy + 14*scale, 1*scale, 1*scale);
+
+    // cat
+    var cx = W*0.42, cy = H*0.66 + bob*0.5;
+    // map cat: k outline, w face
+    var catMap = Object.assign({}, P, { "k": P.k, "w": P.w, "d": P.d });
+    drawSprite(catBase, cx, cy, scale, catMap);
+
+    // tail overlay (to the left)
+    ctx.fillStyle = P.k;
+    for(var ty=0; ty<tailOn.length; ty++){
+      for(var tx=0; tx<tailOn[ty].length; tx++){
+        if(tailOn[ty].charAt(tx) === "k"){
+          ctx.fillRect(cx - (tx+2)*scale, cy + (ty+6)*scale, scale, scale);
+        }
+      }
+    }
+
+    // cup (simple)
+    ctx.fillStyle = isLight ? "rgba(255,255,255,.65)" : "rgba(255,255,255,.45)";
+    ctx.fillRect(W*0.78, H*0.73, 18, 14);
+    ctx.fillRect(W*0.80, H*0.71, 14, 3);
     ctx.globalAlpha = 1;
 
-    // weather overlay
-    var kind = wxKind(currentWxCode);
-
-    // clouds/fog
-    if(kind==="cloudy" || kind==="drizzle" || kind==="rain" || kind==="fog" || kind==="snow"){
-      var baseAlpha = (kind==="fog") ? 0.55 : 0.28;
-      ctx.globalAlpha = baseAlpha;
-      for(var j=0;j<clouds.length;j++){
-        var c = clouds[j];
-        c.x += c.v * dt * (1 + (currentWxWind ? currentWxWind/20 : 0));
-        if(c.x > 1.25) c.x = -0.25;
-        var cx = c.x*W;
-        var cy = c.y*H;
-        var w  = c.w*W;
-        var hh = w*0.35;
-        ctx.fillStyle = isLight ? "rgba(255,255,255,.92)" : "rgba(255,255,255,.86)";
-        ctx.beginPath();
-        ctx.ellipse(cx, cy, w*0.28, hh*0.55, 0, 0, Math.PI*2);
-        ctx.ellipse(cx+w*0.18, cy-hh*0.15, w*0.22, hh*0.50, 0, 0, Math.PI*2);
-        ctx.ellipse(cx-w*0.18, cy-hh*0.10, w*0.24, hh*0.52, 0, 0, Math.PI*2);
-        ctx.fill();
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    // rain
-    if(kind==="rain" || kind==="drizzle"){
-      ctx.globalAlpha = 0.35;
-      ctx.strokeStyle = isLight ? "rgba(0,0,0,.22)" : "rgba(255,255,255,.20)";
-      ctx.lineWidth = 2;
-      for(var k=0;k<drops.length;k++){
-        var dr = drops[k];
-        dr.y += dr.v * dt * 0.8;
-        dr.x += 0.05 * dt;
-        if(dr.y > 1){ dr.y = -Math.random()*0.2; dr.x = Math.random(); }
-        if(dr.x > 1.1) dr.x = -0.1;
-        var x = dr.x*W;
-        var y = dr.y*H;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x+8, y+H*dr.l);
-        ctx.stroke();
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    // snow
-    if(kind==="snow"){
-      ctx.globalAlpha = 0.65;
-      ctx.fillStyle = isLight ? "rgba(255,255,255,.95)" : "rgba(255,255,255,.86)";
-      for(var q=0;q<flakes.length;q++){
-        var fl = flakes[q];
-        fl.y += fl.v * dt;
-        fl.x += (fl.w * dt) + 0.02*Math.sin(t*0.6 + fl.y*10)*dt;
-        if(fl.y > 1){ fl.y = -Math.random()*0.2; fl.x = Math.random(); }
-        if(fl.x > 1.1) fl.x = -0.1;
-        ctx.fillRect(fl.x*W, fl.y*H, 2, 2);
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    // walking human
-    dude.x += dude.v * dt * dude.dir;
-    if(dude.x > 0.92){ dude.x = 0.92; dude.dir = -1; }
-    if(dude.x < 0.08){ dude.x = 0.08; dude.dir = 1; }
-
-    var scale = 5.5;
-    var pxX = dude.x*W;
-    var pxY = dude.y*H + Math.sin(t*6.0)*3;
-
-    ctx.save();
-    ctx.translate(pxX, pxY);
-    ctx.scale(dude.dir, 1);
-
-    // shadow
-    ctx.globalAlpha = 0.20;
-    ctx.fillStyle = "black";
-    ctx.beginPath();
-    ctx.ellipse(0, 62, 40, 10, 0, 0, Math.PI*2);
-    ctx.fill();
+    // subtle vignette
+    ctx.fillStyle = accent;
+    ctx.globalAlpha = 0.10;
+    ctx.fillRect(0,0,W,H);
     ctx.globalAlpha = 1;
-
-    drawHuman(-16*scale/2, -24*scale, scale, t*12, dude.dir);
-    ctx.restore();
   }
 
+  // ====== Loop ======
   var last = performance.now();
   function loop(now){
     var dt = Math.min(0.033, (now-last)/1000);
     last = now;
+
     var rect = canvas.getBoundingClientRect();
     ctx.clearRect(0,0,rect.width, rect.height);
-    draw(dt);
+
+    drawGirlScene(rect.width, rect.height, now/1000);
+
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
