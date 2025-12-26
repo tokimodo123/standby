@@ -1,0 +1,377 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Standby</title>
+  <style>
+    :root{
+      --bg:#0b0f14;
+      --fg:#e6edf3;
+      --muted: rgba(230,237,243,.65);
+      --panel: rgba(255,255,255,.06);
+      --panel2: rgba(255,255,255,.10);
+    }
+    html,body{height:100%; margin:0; background:var(--bg); color:var(--fg); font-family: ui-sans-serif, system-ui, -apple-system, "SF Pro Display", "Hiragino Sans", "Noto Sans JP", sans-serif;}
+    body{overflow:hidden;}
+    .wrap{
+      position:fixed; inset:0;
+      display:grid;
+      grid-template-rows:auto 1fr auto;
+      padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
+      gap:14px;
+    }
+    .top{
+      display:flex; align-items:flex-end; justify-content:space-between;
+      gap:12px;
+    }
+    .clock{
+      font-variant-numeric: tabular-nums;
+      letter-spacing: .02em;
+      line-height:1;
+    }
+    .clock .time{font-size: 64px; font-weight: 700;}
+    .clock .date{margin-top:6px; font-size:16px; color:var(--muted)}
+    .status{
+      padding:10px 12px;
+      border-radius:14px;
+      background: var(--panel);
+      border: 1px solid rgba(255,255,255,.08);
+      min-width: 220px;
+    }
+    .status .label{font-size:12px; color:var(--muted)}
+    .status .task{margin-top:4px; font-size:16px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .mid{
+      position:relative;
+      border-radius: 22px;
+      background: radial-gradient(1200px 500px at 50% 120%, rgba(120,180,255,.18), transparent 60%),
+                  radial-gradient(900px 400px at 20% 120%, rgba(120,255,200,.12), transparent 60%),
+                  radial-gradient(800px 380px at 80% 120%, rgba(255,140,200,.10), transparent 60%),
+                  var(--panel);
+      border: 1px solid rgba(255,255,255,.08);
+      overflow:hidden;
+    }
+    canvas{position:absolute; inset:0; width:100%; height:100%;}
+    .hint{
+      position:absolute; left:14px; bottom:14px;
+      padding:10px 12px;
+      border-radius:14px;
+      background: rgba(0,0,0,.28);
+      border:1px solid rgba(255,255,255,.08);
+      color: rgba(230,237,243,.82);
+      font-size: 13px;
+      backdrop-filter: blur(8px);
+    }
+    .bottom{
+      display:flex; justify-content:space-between; gap:12px; align-items:center;
+    }
+    .btns{display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end;}
+    button{
+      appearance:none; border:1px solid rgba(255,255,255,.12);
+      background: var(--panel2);
+      color:var(--fg);
+      padding:12px 14px;
+      border-radius: 14px;
+      font-size: 14px;
+      font-weight: 650;
+      letter-spacing:.01em;
+      cursor:pointer;
+    }
+    button:active{transform: translateY(1px);}
+    .small{font-size:12px; color:var(--muted)}
+    input{
+      width:min(520px, 56vw);
+      padding:12px 12px;
+      border-radius: 14px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      color:var(--fg);
+      outline:none;
+      font-size: 14px;
+    }
+    @media (max-width: 900px){
+      .clock .time{font-size: 52px;}
+      input{width:min(420px, 54vw);}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="clock">
+        <div class="time" id="time">--:--</div>
+        <div class="date" id="date">----</div>
+      </div>
+      <div class="status">
+        <div class="label">NOW WORKING</div>
+        <div class="task" id="taskText">勉強</div>
+      </div>
+    </div>
+
+    <div class="mid">
+      <canvas id="c"></canvas>
+      <div class="hint">タップ：キャラ反転 / スペース：ダッシュ / R：気分で色替え</div>
+    </div>
+
+    <div class="bottom">
+      <div>
+        <input id="task" placeholder="今やること（例：英語・数学・動画編集）" />
+        <div class="small">※入力してEnterで反映（自動保存）</div>
+      </div>
+      <div class="btns">
+        <button id="openChatGPT">ChatGPTを開く</button>
+        <button id="toggleMode">集中モード</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+(() => {
+  // ---- Clock ----
+  const timeEl = document.getElementById("time");
+  const dateEl = document.getElementById("date");
+  const pad = (n)=>String(n).padStart(2,"0");
+  const dow = ["日","月","火","水","木","金","土"];
+  function tick(){
+    const d = new Date();
+    timeEl.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    dateEl.textContent = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} (${dow[d.getDay()]})`;
+  }
+  tick(); setInterval(tick, 1000);
+
+  // ---- Task input (localStorage) ----
+  const taskInput = document.getElementById("task");
+  const taskText = document.getElementById("taskText");
+  const key = "standby_task_v1";
+  const saved = localStorage.getItem(key);
+  if(saved){ taskText.textContent = saved; taskInput.value = saved; }
+  taskInput.addEventListener("keydown", (e)=>{
+    if(e.key === "Enter"){
+      const v = taskInput.value.trim() || "勉強";
+      taskText.textContent = v;
+      localStorage.setItem(key, v);
+      taskInput.blur();
+    }
+  });
+
+  // ---- Buttons ----
+  document.getElementById("openChatGPT").addEventListener("click", ()=>{
+    // iPadだと新規タブで開きやすい
+    window.open("https://chatgpt.com", "_blank");
+  });
+
+  let focusMode = false;
+  const wrap = document.querySelector(".wrap");
+  const top = document.querySelector(".top");
+  const bottom = document.querySelector(".bottom");
+  document.getElementById("toggleMode").addEventListener("click", ()=>{
+    focusMode = !focusMode;
+    top.style.display = focusMode ? "none" : "flex";
+    bottom.style.display = focusMode ? "none" : "flex";
+  });
+
+  // ---- Pixel character animation ----
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d", { alpha: true });
+
+  function resize(){
+    const r = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    canvas.width  = Math.floor(rect.width * r);
+    canvas.height = Math.floor(rect.height * r);
+    ctx.setTransform(r,0,0,r,0,0);
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // Simple palette sets
+  const palettes = [
+    { body:"#9BE9A8", dark:"#2D6A4F", eye:"#0b0f14", blush:"#FF6B9A" },
+    { body:"#A0C4FF", dark:"#364FC7", eye:"#0b0f14", blush:"#FFB703" },
+    { body:"#FFD6A5", dark:"#E76F51", eye:"#0b0f14", blush:"#FF006E" }
+  ];
+  let pal = palettes[0];
+
+  // character state
+  const state = {
+    x: 120, y: 0,
+    vx: 70, // px/s
+    dir: 1,
+    t: 0,
+    dash: 0,
+    hueShift: 0,
+  };
+
+  let flip = false;
+
+  // draw a tiny "slime-cat" pixel sprite (16x16) scaled
+  // We'll generate pixels procedurally each frame (fast enough).
+  function drawSprite(x, y, scale, frame){
+    const s = scale;
+    const px = (ix,iy,col)=>{
+      ctx.fillStyle = col;
+      ctx.fillRect(x + ix*s, y + iy*s, s, s);
+    };
+
+    // base shape (rounded blob)
+    const body = pal.body, dark = pal.dark, eye = pal.eye, blush = pal.blush;
+
+    // 16x16 mask-ish coordinates
+    const mask = [
+      "....######......",
+      "...########.....",
+      "..##########....",
+      ".############...",
+      ".############...",
+      ".############...",
+      ".############...",
+      ".############...",
+      "..##########....",
+      "..##########....",
+      "...########.....",
+      "....######......",
+      ".....####.......",
+      "......##........",
+      "................",
+      "................",
+    ];
+
+    // little ear pixels
+    const ears = [
+      {x:5,y:1},{x:10,y:1},{x:4,y:2},{x:11,y:2}
+    ];
+
+    // legs (bobbing)
+    const legOffset = Math.round(Math.sin(frame*0.8)*1);
+    const legs = [
+      {x:5,y:12+legOffset},{x:10,y:12-legOffset}
+    ];
+
+    // draw body
+    for(let iy=0; iy<16; iy++){
+      for(let ix=0; ix<16; ix++){
+        if(mask[iy][ix] === "#"){
+          // simple shading: darker on lower-right
+          const shade = (ix+iy > 18) ? dark : body;
+          px(ix,iy,shade);
+        }
+      }
+    }
+
+    // ears
+    ears.forEach(p => px(p.x,p.y,dark));
+
+    // eyes blink
+    const blink = (Math.sin(frame*0.12) > 0.985);
+    if(!blink){
+      px(6,6,eye); px(9,6,eye);
+      // tiny highlight
+      px(6,5,"rgba(255,255,255,.8)");
+      px(9,5,"rgba(255,255,255,.8)");
+    }else{
+      px(6,6,eye); px(7,6,eye);
+      px(9,6,eye); px(10,6,eye);
+    }
+
+    // blush
+    px(5,8,blush); px(10,8,blush);
+
+    // mouth changes with frame
+    if(Math.sin(frame*0.2) > 0){
+      px(7,9,eye); px(8,9,eye);
+    }else{
+      px(7,9,eye);
+    }
+
+    // legs
+    legs.forEach(p => px(p.x,p.y, dark));
+  }
+
+  function jitterStars(w,h, t){
+    const n = 60;
+    for(let i=0;i<n;i++){
+      const x = (i*97) % w;
+      const y = (i*173) % h;
+      const tw = (Math.sin(t*0.8 + i)*0.5 + 0.5);
+      ctx.globalAlpha = 0.12 + tw*0.25;
+      ctx.fillStyle = "white";
+      ctx.fillRect(x, y, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // tap to flip direction
+  document.querySelector(".mid").addEventListener("click", ()=>{
+    flip = !flip;
+  });
+
+  // keyboard controls (iPad + Magic Keyboard)
+  window.addEventListener("keydown", (e)=>{
+    if(e.code === "Space"){ state.dash = 0.7; }
+    if(e.key.toLowerCase() === "r"){
+      const idx = palettes.indexOf(pal);
+      pal = palettes[(idx+1) % palettes.length];
+    }
+  });
+
+  let last = performance.now();
+  function loop(now){
+    const dt = Math.min(0.033, (now-last)/1000);
+    last = now;
+    state.t += dt;
+
+    const rect = canvas.getBoundingClientRect();
+    const W = rect.width, H = rect.height;
+
+    // clear
+    ctx.clearRect(0,0,W,H);
+
+    // subtle ground
+    ctx.globalAlpha = 0.22;
+    ctx.fillStyle = "white";
+    ctx.fillRect(0, H-42, W, 1);
+    ctx.globalAlpha = 1;
+
+    jitterStars(W,H, state.t);
+
+    // movement
+    const speed = state.vx * (state.dash>0 ? 2.6 : 1);
+    if(state.dash>0) state.dash = Math.max(0, state.dash - dt);
+
+    state.x += speed * dt * state.dir * (flip ? -1 : 1);
+
+    // bounce near edges
+    const margin = 60;
+    if(state.x < margin){ state.x = margin; state.dir = 1; }
+    if(state.x > W - margin){ state.x = W - margin; state.dir = -1; }
+
+    // bobbing
+    const bob = Math.sin(state.t*3.0)*6;
+    state.y = H*0.62 + bob;
+
+    // draw sprite centered
+    const scale = 6; // pixel size
+    const spriteW = 16*scale, spriteH = 16*scale;
+    ctx.save();
+    ctx.translate(state.x, state.y);
+    // mirror by direction
+    const facing = (state.dir * (flip ? -1 : 1)) >= 0 ? 1 : -1;
+    ctx.scale(facing, 1);
+    drawSprite(-spriteW/2, -spriteH/2, scale, now/16);
+    ctx.restore();
+
+    // small trail when dashing
+    if(state.dash>0.01){
+      ctx.globalAlpha = 0.12;
+      ctx.fillStyle = "white";
+      ctx.fillRect(state.x - 140, state.y + 40, 120, 2);
+      ctx.globalAlpha = 1;
+    }
+
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
