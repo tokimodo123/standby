@@ -6,22 +6,24 @@
   <title>Standby</title>
   <style>
     :root{
-      --bg:#070b10;
-      --fg:#e6edf3;
-      --muted: rgba(230,237,243,.68);
-      --panel: rgba(255,255,255,.06);
+      --bg:#0a0f16;
+      --fg:#e7eef7;
+      --muted: rgba(231,238,247,.65);
+      --panel: rgba(255,255,255,.07);
       --panel2: rgba(255,255,255,.10);
       --border: rgba(255,255,255,.12);
-      --shadow: rgba(0,0,0,.25);
+      --shadow: rgba(0,0,0,.28);
+      --accent:#ff5473;
     }
-    [data-theme="light"]{
+    html[data-theme="light"]{
       --bg:#f6f7fb;
       --fg:#0b1220;
-      --muted: rgba(11,18,32,.60);
+      --muted: rgba(11,18,32,.58);
       --panel: rgba(0,0,0,.05);
       --panel2: rgba(0,0,0,.08);
       --border: rgba(0,0,0,.12);
       --shadow: rgba(0,0,0,.08);
+      --accent:#ff2f5a;
     }
 
     html,body{height:100%; margin:0; background:var(--bg); color:var(--fg);
@@ -32,39 +34,40 @@
       position:fixed; inset:0;
       padding: 18px 18px calc(18px + env(safe-area-inset-bottom));
       display:grid;
-      grid-template-columns: 1fr 1fr; /* 左=時計, 右=アニメ */
+      grid-template-columns: 1fr 1fr;
       gap:14px;
+      box-sizing:border-box;
     }
-
-    .left, .right{
+    .panel{
       border-radius: 24px;
       background: var(--panel);
-      border:1px solid rgba(255,255,255,.08);
-      border-color: var(--border);
+      border: 1px solid var(--border);
       overflow:hidden;
       position:relative;
     }
 
+    /* LEFT */
     .leftInner{
+      height:100%;
       padding:18px;
+      box-sizing:border-box;
       display:grid;
       grid-template-rows: auto auto 1fr;
       gap:14px;
-      height:100%;
-      box-sizing:border-box;
     }
-
     .topRow{
-      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
     }
-
     .digital{
       font-variant-numeric: tabular-nums;
       letter-spacing: .02em;
       line-height:1;
     }
     .digital .time{
-      font-size: 108px;
+      font-size: 112px;
       font-weight: 900;
     }
     .digital .date{
@@ -72,88 +75,109 @@
       font-size: 18px;
       color: var(--muted);
     }
-
     .controls{
-      display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; justify-content:flex-end;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      align-items:flex-end;
     }
     .btn{
       appearance:none;
-      border:1px solid var(--border);
+      border: 1px solid var(--border);
       background: var(--panel2);
       color: var(--fg);
       padding: 12px 14px;
       border-radius: 16px;
       font-size: 14px;
-      font-weight: 750;
+      font-weight: 800;
       cursor:pointer;
       white-space:nowrap;
-      box-shadow: 0 8px 18px var(--shadow);
+      box-shadow: 0 10px 22px var(--shadow);
     }
     .btn:active{transform: translateY(1px);}
 
     .midRow{
       display:grid;
-      grid-template-columns: 1fr 1fr; /* 左アナログ, 右天気 */
+      grid-template-columns: 1fr 1fr;
       gap:14px;
       align-items:stretch;
     }
-
     .card{
       border-radius: 20px;
       background: var(--panel);
-      border:1px solid var(--border);
+      border: 1px solid var(--border);
       padding:14px;
       box-sizing:border-box;
-      min-height: 160px;
+      min-height: 170px;
     }
-    .label{font-size:12px; color:var(--muted); margin-bottom:10px;}
-    .wxMain{display:flex; align-items:center; gap:12px;}
-    .wxIcon{font-size:32px; width:38px; text-align:center;}
-    .wxTemp{font-size:28px; font-weight:900; line-height:1;}
-    .wxPlace{margin-top:6px; font-size:14px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-    .wxDetail{margin-top:6px; font-size:12px; color:var(--muted);}
-    .wxMeta{margin-top:10px; font-size:12px; color:var(--muted);}
-
+    .label{
+      font-size: 12px;
+      color: var(--muted);
+      margin-bottom: 10px;
+      letter-spacing: .06em;
+    }
     .analogWrap{
-      display:flex; align-items:center; justify-content:center;
-      height:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      height: calc(100% - 22px);
     }
-
-    /* アナログ時計（SVG） */
     .clockSvg{
-      width: min(260px, 22vw);
+      width: min(280px, 22vw);
       height: auto;
       filter: drop-shadow(0 10px 22px var(--shadow));
     }
-    .dial{fill: color-mix(in srgb, var(--bg) 70%, transparent); stroke: var(--border); stroke-width: 2;}
-    .tick{stroke: color-mix(in srgb, var(--fg) 60%, transparent); stroke-width: 2; opacity:.55}
-    .tickBig{stroke: color-mix(in srgb, var(--fg) 80%, transparent); stroke-width: 3; opacity:.75}
-    .handH{stroke: var(--fg); stroke-width: 8; stroke-linecap: round;}
-    .handM{stroke: var(--fg); stroke-width: 6; stroke-linecap: round; opacity:.95}
-    .handS{stroke: color-mix(in srgb, #ff4d6d 70%, var(--fg)); stroke-width: 3; stroke-linecap: round; opacity:.9}
-    .pin{fill: var(--fg); opacity:.9}
+    .dial{
+      fill: transparent;
+      stroke: var(--border);
+      stroke-width: 2;
+    }
+    .face{
+      fill: rgba(0,0,0,.22);
+    }
+    html[data-theme="light"] .face{ fill: rgba(255,255,255,.50); }
 
-    .right canvas{position:absolute; inset:0; width:100%; height:100%;}
-    .rightBottom{
+    .tick{stroke: rgba(255,255,255,.35); stroke-width: 2;}
+    .tickBig{stroke: rgba(255,255,255,.55); stroke-width: 3;}
+    html[data-theme="light"] .tick{stroke: rgba(0,0,0,.30);}
+    html[data-theme="light"] .tickBig{stroke: rgba(0,0,0,.45);}
+
+    .handH{stroke: var(--fg); stroke-width: 8; stroke-linecap: round;}
+    .handM{stroke: var(--fg); stroke-width: 6; stroke-linecap: round; opacity:.95;}
+    .handS{stroke: var(--accent); stroke-width: 3; stroke-linecap: round; opacity:.95;}
+    .pin{fill: var(--fg); opacity:.9;}
+
+    .wxMain{display:flex; align-items:center; gap:12px;}
+    .wxIcon{font-size:34px; width:40px; text-align:center;}
+    .wxTemp{font-size:30px; font-weight:900; line-height:1;}
+    .wxPlace{margin-top:6px; font-size:14px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+    .wxDetail{margin-top:6px; font-size:12px; color:var(--muted);}
+    .wxMeta{margin-top:12px; font-size:12px; color:var(--muted);}
+
+    /* RIGHT */
+    #scene{position:absolute; inset:0; width:100%; height:100%;}
+    .rightBtns{
       position:absolute;
-      right: 14px;
-      bottom: 14px;
+      right:14px;
+      bottom:14px;
       display:flex;
       gap:10px;
-      z-index: 5;
+      z-index:5;
     }
 
     @media (max-width: 980px){
-      .digital .time{font-size: 84px;}
+      .digital .time{font-size: 86px;}
       .midRow{grid-template-columns: 1fr;}
-      .clockSvg{width:min(260px, 38vw);}
+      .clockSvg{width:min(300px, 44vw);}
+      .controls{flex-direction:row;}
     }
   </style>
 </head>
+
 <body>
   <div class="wrap">
     <!-- LEFT -->
-    <section class="left">
+    <section class="panel">
       <div class="leftInner">
         <div class="topRow">
           <div class="digital">
@@ -171,11 +195,9 @@
             <div class="label">ANALOG</div>
             <div class="analogWrap">
               <svg class="clockSvg" viewBox="0 0 200 200" aria-label="analog clock">
+                <circle cx="100" cy="100" r="90" class="face"></circle>
                 <circle cx="100" cy="100" r="92" class="dial"></circle>
-                <!-- ticks -->
                 <g id="ticks"></g>
-
-                <!-- hands -->
                 <g transform="translate(100 100)">
                   <line id="handH" x1="0" y1="10" x2="0" y2="-42" class="handH"></line>
                   <line id="handM" x1="0" y1="14" x2="0" y2="-62" class="handM"></line>
@@ -186,13 +208,13 @@
             </div>
           </div>
 
-          <div class="card" id="weatherCard">
+          <div class="card">
             <div class="label">WEATHER</div>
             <div class="wxMain">
               <div class="wxIcon" id="wxIcon">⛅️</div>
               <div>
                 <div class="wxTemp" id="wxTemp">--°C</div>
-                <div class="wxPlace" id="wxPlace">取得中…</div>
+                <div class="wxPlace" id="wxPlace">天気取得待ち</div>
                 <div class="wxDetail" id="wxDetail">—</div>
               </div>
             </div>
@@ -205,559 +227,560 @@
     </section>
 
     <!-- RIGHT -->
-    <section class="right">
+    <section class="panel">
       <canvas id="scene"></canvas>
-      <div class="rightBottom">
-        <button class="btn" id="retryWx">天気更新</button>
+      <div class="rightBtns">
+        <button class="btn" id="wxBtn">天気更新</button>
       </div>
     </section>
   </div>
 
 <script>
-(() => {
-  // ---------- THEME ----------
-  const themeKey = "standby_theme_v2";
-  const root = document.documentElement;
-  function setTheme(t){
+(function(){
+  // ====== Safe storage (iOSで例外が出ても止まらない) ======
+  function storageGet(key){
+    try { return localStorage.getItem(key); } catch(e){ return null; }
+  }
+  function storageSet(key, val){
+    try { localStorage.setItem(key, val); } catch(e){}
+  }
+
+  // ====== Theme ======
+  var themeKey = "standby_theme_v3";
+  var root = document.documentElement;
+  function applyTheme(t){
     root.setAttribute("data-theme", t);
-    localStorage.setItem(themeKey, t);
+    storageSet(themeKey, t);
     document.getElementById("themeBtn").textContent = (t === "light") ? "ダーク" : "ホワイト";
   }
-  const savedTheme = localStorage.getItem(themeKey);
-  if(savedTheme) setTheme(savedTheme);
-  else {
-    const prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches;
-    setTheme(prefersLight ? "light" : "dark");
+  var saved = storageGet(themeKey);
+  if(saved){
+    applyTheme(saved);
+  }else{
+    var prefersLight = false;
+    try { prefersLight = window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches; } catch(e){}
+    applyTheme(prefersLight ? "light" : "dark");
   }
-  document.getElementById("themeBtn").addEventListener("click", ()=>{
-    const cur = root.getAttribute("data-theme") || "dark";
-    setTheme(cur === "dark" ? "light" : "dark");
+  document.getElementById("themeBtn").addEventListener("click", function(){
+    var cur = root.getAttribute("data-theme") || "dark";
+    applyTheme(cur === "dark" ? "light" : "dark");
   });
 
-  // ---------- CHAT ----------
-  document.getElementById("chatBtn").addEventListener("click", ()=>{
+  // ====== Chat ======
+  document.getElementById("chatBtn").addEventListener("click", function(){
     window.open("https://chatgpt.com", "_blank");
   });
 
-  // ---------- DIGITAL CLOCK ----------
-  const timeEl = document.getElementById("time");
-  const dateEl = document.getElementById("date");
-  const pad = (n)=>String(n).padStart(2,"0");
-  const dow = ["日","月","火","水","木","金","土"];
-  function tick(){
-    const d = new Date();
-    timeEl.textContent = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-    dateEl.textContent = `${d.getFullYear()}/${pad(d.getMonth()+1)}/${pad(d.getDate())} (${dow[d.getDay()]})`;
-    updateAnalog(d);
-    updateSceneTime(d);
-  }
-  setInterval(tick, 1000);
-  tick();
+  // ====== Digital + Analog clock ======
+  var timeEl = document.getElementById("time");
+  var dateEl = document.getElementById("date");
+  var handH = document.getElementById("handH");
+  var handM = document.getElementById("handM");
+  var handS = document.getElementById("handS");
+  var sceneHour = 12, sceneMin = 0, sceneSec = 0;
 
-  // ---------- ANALOG CLOCK ----------
-  const ticksG = document.getElementById("ticks");
-  // generate ticks once
-  (() => {
-    let s = "";
-    for(let i=0;i<60;i++){
-      const a = (Math.PI*2) * (i/60);
-      const r1 = 80;
-      const r2 = (i%5===0) ? 70 : 74;
-      const x1 = 100 + Math.sin(a)*r1;
-      const y1 = 100 - Math.cos(a)*r1;
-      const x2 = 100 + Math.sin(a)*r2;
-      const y2 = 100 - Math.cos(a)*r2;
-      const cls = (i%5===0) ? "tickBig" : "tick";
-      s += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" class="${cls}" />`;
+  function pad(n){ return (n<10 ? "0" : "") + n; }
+  var dow = ["日","月","火","水","木","金","土"];
+
+  function rot(el, deg){
+    // SVG rotate uses element origin (0,0) inside translated group
+    el.setAttribute("transform", "rotate(" + deg + ")");
+  }
+
+  // ticks create once
+  (function(){
+    var ticksG = document.getElementById("ticks");
+    var s = "";
+    for(var i=0;i<60;i++){
+      var a = (Math.PI*2) * (i/60);
+      var r1 = 80;
+      var r2 = (i%5===0) ? 70 : 74;
+      var x1 = 100 + Math.sin(a)*r1;
+      var y1 = 100 - Math.cos(a)*r1;
+      var x2 = 100 + Math.sin(a)*r2;
+      var y2 = 100 - Math.cos(a)*r2;
+      var cls = (i%5===0) ? "tickBig" : "tick";
+      s += '<line x1="'+x1.toFixed(2)+'" y1="'+y1.toFixed(2)+'" x2="'+x2.toFixed(2)+'" y2="'+y2.toFixed(2)+'" class="'+cls+'" />';
     }
     ticksG.innerHTML = s;
   })();
 
-  const handH = document.getElementById("handH");
-  const handM = document.getElementById("handM");
-  const handS = document.getElementById("handS");
-
-  function rot(el, deg){
-    el.setAttribute("transform", `rotate(${deg})`);
-  }
   function updateAnalog(d){
-    const h = d.getHours()%12;
-    const m = d.getMinutes();
-    const s = d.getSeconds();
-    const ms = d.getMilliseconds();
+    var h = d.getHours() % 12;
+    var m = d.getMinutes();
+    var s = d.getSeconds();
+    var ms = d.getMilliseconds();
 
-    const sec = s + ms/1000;
-    const min = m + sec/60;
-    const hour = h + min/60;
+    var sec = s + ms/1000;
+    var min = m + sec/60;
+    var hour = h + min/60;
 
     rot(handS, sec*6);
     rot(handM, min*6);
     rot(handH, hour*30);
   }
 
-  // ---------- WEATHER (stronger / fallback) ----------
-  const wxIconEl = document.getElementById("wxIcon");
-  const wxTempEl = document.getElementById("wxTemp");
-  const wxPlaceEl = document.getElementById("wxPlace");
-  const wxDetailEl = document.getElementById("wxDetail");
-  const wxMetaEl = document.getElementById("wxMeta");
+  function tick(){
+    var d = new Date();
+    timeEl.textContent = pad(d.getHours()) + ":" + pad(d.getMinutes());
+    dateEl.textContent = d.getFullYear()+"/"+pad(d.getMonth()+1)+"/"+pad(d.getDate())+" ("+dow[d.getDay()]+")";
+    updateAnalog(d);
+    sceneHour = d.getHours();
+    sceneMin = d.getMinutes();
+    sceneSec = d.getSeconds();
+  }
+  tick();
+  setInterval(tick, 1000);
 
-  let currentWxCode = null; // for scene effects
-  let currentWxWind = null;
+  // ====== Weather (必ず終わる・必ず表示される) ======
+  var wxIconEl = document.getElementById("wxIcon");
+  var wxTempEl = document.getElementById("wxTemp");
+  var wxPlaceEl = document.getElementById("wxPlace");
+  var wxDetailEl = document.getElementById("wxDetail");
+  var wxMetaEl = document.getElementById("wxMeta");
+
+  var currentWxCode = null; // for scene
+  var currentWxWind = 0;
 
   function weatherEmoji(code){
-    if(code === 0) return "☀️";
-    if([1,2].includes(code)) return "🌤️";
-    if(code === 3) return "☁️";
-    if([45,48].includes(code)) return "🌫️";
-    if([51,53,55,56,57].includes(code)) return "🌦️";
-    if([61,63,65,66,67].includes(code)) return "🌧️";
-    if([71,73,75,77].includes(code)) return "🌨️";
-    if([80,81,82].includes(code)) return "🌧️";
-    if([85,86].includes(code)) return "🌨️";
-    if([95,96,99].includes(code)) return "⛈️";
+    if(code===0) return "☀️";
+    if(code===1||code===2) return "🌤️";
+    if(code===3) return "☁️";
+    if(code===45||code===48) return "🌫️";
+    if(code===51||code===53||code===55||code===56||code===57) return "🌦️";
+    if(code===61||code===63||code===65||code===66||code===67) return "🌧️";
+    if(code===71||code===73||code===75||code===77) return "🌨️";
+    if(code===80||code===81||code===82) return "🌧️";
+    if(code===85||code===86) return "🌨️";
+    if(code===95||code===96||code===99) return "⛈️";
     return "⛅️";
   }
   function codeText(code){
-    const m = new Map([
-      [0,"快晴"],[1,"晴れ"],[2,"晴れ時々曇り"],[3,"曇り"],
-      [45,"霧"],[48,"霧"],
-      [51,"霧雨(弱)"],[53,"霧雨(中)"],[55,"霧雨(強)"],
-      [56,"凍結霧雨(弱)"],[57,"凍結霧雨(強)"],
-      [61,"雨(弱)"],[63,"雨(中)"],[65,"雨(強)"],
-      [66,"凍結雨(弱)"],[67,"凍結雨(強)"],
-      [71,"雪(弱)"],[73,"雪(中)"],[75,"雪(強)"],[77,"霰(あられ)"],
-      [80,"にわか雨(弱)"],[81,"にわか雨(中)"],[82,"にわか雨(強)"],
-      [85,"にわか雪(弱)"],[86,"にわか雪(強)"],
-      [95,"雷雨"],[96,"雷雨(雹)"],[99,"雷雨(雹)"]
-    ]);
-    return m.get(code) ?? `天気コード ${code}`;
+    var map = {
+      0:"快晴",1:"晴れ",2:"晴れ時々曇り",3:"曇り",45:"霧",48:"霧",
+      51:"霧雨(弱)",53:"霧雨(中)",55:"霧雨(強)",56:"凍結霧雨(弱)",57:"凍結霧雨(強)",
+      61:"雨(弱)",63:"雨(中)",65:"雨(強)",66:"凍結雨(弱)",67:"凍結雨(強)",
+      71:"雪(弱)",73:"雪(中)",75:"雪(強)",77:"霰(あられ)",
+      80:"にわか雨(弱)",81:"にわか雨(中)",82:"にわか雨(強)",
+      85:"にわか雪(弱)",86:"にわか雪(強)",
+      95:"雷雨",96:"雷雨(雹)",99:"雷雨(雹)"
+    };
+    return map[code] || ("天気コード " + code);
   }
 
-  async function fetchWeather(lat, lon){
-    const url =
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
-      `&current=temperature_2m,weather_code,wind_speed_10m` +
-      `&timezone=Asia%2FTokyo`;
-    const r = await fetch(url, { cache:"no-store" });
-    if(!r.ok) throw new Error("weather fetch failed");
-    return r.json();
-  }
-  async function reverseGeocode(lat, lon){
-    const url =
-      `https://geocoding-api.open-meteo.com/v1/reverse?latitude=${lat}&longitude=${lon}&language=ja`;
-    const r = await fetch(url, { cache:"no-store" });
-    if(!r.ok) return null;
-    const j = await r.json();
-    const p = j?.results?.[0];
-    if(!p) return null;
-    const parts = [p.name, p.admin1, p.country].filter(Boolean);
-    // 例: "新宿区, 東京都, 日本"
-    return parts.join(", ");
+  function setWx(state){
+    wxTempEl.textContent = state.tempText || "--°C";
+    wxPlaceEl.textContent = state.place || "—";
+    wxDetailEl.textContent = state.detail || "—";
+    wxMetaEl.textContent = state.meta || "—";
+    wxIconEl.textContent = state.icon || "⛅️";
+    currentWxCode = (typeof state.code === "number") ? state.code : currentWxCode;
+    currentWxWind = (typeof state.wind === "number") ? state.wind : currentWxWind;
   }
 
-  function setWxState({tempText="--°C", place="取得中…", detail="—", meta="—", icon="⛅️", code=null, wind=null}){
-    wxTempEl.textContent = tempText;
-    wxPlaceEl.textContent = place;
-    wxDetailEl.textContent = detail;
-    wxMetaEl.textContent = meta;
-    wxIconEl.textContent = icon;
-    currentWxCode = code;
-    currentWxWind = wind;
-  }
+  function fetchWithTimeout(url, ms){
+    return new Promise(function(resolve, reject){
+      var done = false;
+      var timer = setTimeout(function(){
+        if(done) return;
+        done = true;
+        reject(new Error("timeout"));
+      }, ms);
 
-  async function updateWeatherWithCoords(lat, lon, placeHint=null){
-    const [wx, place] = await Promise.all([
-      fetchWeather(lat, lon),
-      placeHint ? Promise.resolve(placeHint) : reverseGeocode(lat, lon)
-    ]);
-
-    const cur = wx.current;
-    const temp = Math.round(cur.temperature_2m);
-    const code = cur.weather_code;
-    const wind = Math.round(cur.wind_speed_10m);
-
-    setWxState({
-      tempText: `${temp}°C`,
-      place: place ?? `lat ${lat.toFixed(2)}, lon ${lon.toFixed(2)}`,
-      detail: `${codeText(code)} / 風 ${wind}m/s`,
-      meta: `最終更新: ${new Date().toLocaleTimeString("ja-JP",{hour:"2-digit", minute:"2-digit"})}`,
-      icon: weatherEmoji(code),
-      code, wind
+      fetch(url, {cache:"no-store"})
+        .then(function(r){
+          if(!r.ok) throw new Error("http");
+          return r.json();
+        })
+        .then(function(j){
+          if(done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve(j);
+        })
+        .catch(function(e){
+          if(done) return;
+          done = true;
+          clearTimeout(timer);
+          reject(e);
+        });
     });
   }
 
-  async function updateWeather(){
-    setWxState({ place:"位置情報を確認中…", meta:"—" });
+  function updateWeatherWithCoords(lat, lon, placeText){
+    var url =
+      "https://api.open-meteo.com/v1/forecast?latitude="+lat+
+      "&longitude="+lon+
+      "&current=temperature_2m,weather_code,wind_speed_10m"+
+      "&timezone=Asia%2FTokyo";
 
-    // iPad Safariで位置情報が取れない時があるので、フォールバックを確実にする
-    const fallback = async (reason)=>{
-      // 東京駅あたり（安定）
-      await updateWeatherWithCoords(35.681236, 139.767125, `東京（位置情報OFF: ${reason}）`);
-    };
+    return fetchWithTimeout(url, 9000).then(function(wx){
+      var cur = wx && wx.current ? wx.current : null;
+      if(!cur) throw new Error("baddata");
+      var temp = Math.round(cur.temperature_2m);
+      var code = cur.weather_code;
+      var wind = Math.round(cur.wind_speed_10m);
 
+      setWx({
+        tempText: temp + "°C",
+        place: placeText,
+        detail: codeText(code) + " / 風 " + wind + "m/s",
+        meta: "最終更新: " + new Date().toLocaleTimeString("ja-JP",{hour:"2-digit",minute:"2-digit"}),
+        icon: weatherEmoji(code),
+        code: code,
+        wind: wind
+      });
+    });
+  }
+
+  function reverseGeocode(lat, lon){
+    var url = "https://geocoding-api.open-meteo.com/v1/reverse?latitude="+lat+"&longitude="+lon+"&language=ja";
+    return fetchWithTimeout(url, 9000).then(function(j){
+      var p = j && j.results && j.results[0] ? j.results[0] : null;
+      if(!p) return null;
+      var parts = [];
+      if(p.name) parts.push(p.name);
+      if(p.admin1) parts.push(p.admin1);
+      if(p.country) parts.push(p.country);
+      return parts.join(", ");
+    }).catch(function(){ return null; });
+  }
+
+  function fallbackTokyo(reason){
+    // 東京駅付近
+    return updateWeatherWithCoords(35.681236, 139.767125, "東京（" + reason + "）");
+  }
+
+  function updateWeather(){
+    setWx({ place:"天気取得中…", meta:"—", icon:"⛅️" });
+
+    // 絶対に「取得中…」で固まらないための保険
+    var hardTimeout = setTimeout(function(){
+      fallbackTokyo("取得が長引いたため東京を表示");
+    }, 12000);
+
+    function finish(){ clearTimeout(hardTimeout); }
+
+    // geolocation → reverseGeocode → weather
     if(!navigator.geolocation){
-      await fallback("非対応");
+      fallbackTokyo("位置情報非対応").then(finish).catch(finish);
       return;
     }
 
-    // Permissions API はSafariで使えたり使えなかったりするので try
-    try{
-      if(navigator.permissions?.query){
-        const p = await navigator.permissions.query({ name: "geolocation" });
-        if(p.state === "denied"){
-          await fallback("拒否");
-          return;
-        }
-      }
-    }catch(_){}
+    navigator.geolocation.getCurrentPosition(function(pos){
+      var lat = pos.coords.latitude;
+      var lon = pos.coords.longitude;
 
-    navigator.geolocation.getCurrentPosition(async (pos)=>{
-      try{
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        await updateWeatherWithCoords(lat, lon);
-      }catch(e){
-        await fallback("取得失敗");
-      }
-    }, async (err)=>{
-      await fallback(err?.code === 1 ? "拒否" : "エラー");
-    }, { enableHighAccuracy:false, timeout: 9000, maximumAge: 10*60*1000 });
+      reverseGeocode(lat, lon).then(function(place){
+        var label = place || ("lat " + lat.toFixed(2) + ", lon " + lon.toFixed(2));
+        return updateWeatherWithCoords(lat, lon, label);
+      }).then(finish).catch(function(){
+        fallbackTokyo("天気API失敗").then(finish).catch(finish);
+      });
+
+    }, function(err){
+      var reason = (err && err.code === 1) ? "位置情報拒否" : "位置情報エラー";
+      fallbackTokyo(reason).then(finish).catch(finish);
+    }, { enableHighAccuracy:false, timeout:8000, maximumAge: 10*60*1000 });
   }
 
-  document.getElementById("retryWx").addEventListener("click", updateWeather);
+  document.getElementById("wxBtn").addEventListener("click", function(){
+    updateWeather();
+  });
+
   updateWeather();
   setInterval(updateWeather, 10*60*1000);
 
-  // ---------- RIGHT SCENE (time-based sky + sun/moon + weather effects + walking human) ----------
-  const canvas = document.getElementById("scene");
-  const ctx = canvas.getContext("2d", { alpha: true });
+  // ====== Right Scene ======
+  var canvas = document.getElementById("scene");
+  var ctx = canvas.getContext("2d", {alpha:true});
 
   function resize(){
-    const r = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width  = Math.floor(rect.width * r);
-    canvas.height = Math.floor(rect.height * r);
+    var r = window.devicePixelRatio || 1;
+    var rect = canvas.getBoundingClientRect();
+    canvas.width = Math.floor(rect.width * r);
+    canvas.height= Math.floor(rect.height* r);
     ctx.setTransform(r,0,0,r,0,0);
   }
   window.addEventListener("resize", resize);
   resize();
 
-  // time state shared
-  let sceneHour = 12, sceneMin = 0, sceneSec = 0;
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
 
-  function updateSceneTime(d){
-    sceneHour = d.getHours();
-    sceneMin = d.getMinutes();
-    sceneSec = d.getSeconds();
-  }
-
-  // weather classification for effects
   function wxKind(code){
     if(code == null) return "unknown";
-    if(code === 0 || code === 1) return "clear";
-    if(code === 2 || code === 3) return "cloudy";
-    if([45,48].includes(code)) return "fog";
-    if([51,53,55,56,57].includes(code)) return "drizzle";
-    if([61,63,65,66,67,80,81,82,95,96,99].includes(code)) return "rain";
-    if([71,73,75,77,85,86].includes(code)) return "snow";
+    if(code===0||code===1) return "clear";
+    if(code===2||code===3) return "cloudy";
+    if(code===45||code===48) return "fog";
+    if(code===51||code===53||code===55||code===56||code===57) return "drizzle";
+    if(code===61||code===63||code===65||code===66||code===67||code===80||code===81||code===82||code===95||code===96||code===99) return "rain";
+    if(code===71||code===73||code===75||code===77||code===85||code===86) return "snow";
     return "cloudy";
   }
 
-  // draw helpers
-  function lerp(a,b,t){ return a + (b-a)*t; }
-  function clamp(x,a,b){ return Math.max(a, Math.min(b,x)); }
+  // stars
+  var stars = [];
+  for(var i=0;i<120;i++){
+    stars.push({x:((i*97)%1000)/1000, y:((i*173)%1000)/1000, s:((i*37)%7)+1});
+  }
+  // clouds
+  var clouds = [];
+  for(var c=0;c<9;c++){
+    clouds.push({x:Math.random()*1.2-0.1, y:Math.random()*0.35+0.08, v:0.010+Math.random()*0.02, w:0.18+Math.random()*0.18});
+  }
+  // rain drops
+  var drops = [];
+  for(var d=0; d<190; d++){
+    drops.push({x:Math.random(), y:Math.random(), v:0.8+Math.random()*1.2, l:0.015+Math.random()*0.02});
+  }
+  // snow flakes
+  var flakes = [];
+  for(var f=0; f<150; f++){
+    flakes.push({x:Math.random(), y:Math.random(), v:0.12+Math.random()*0.25, s:0.004+Math.random()*0.008, w:(Math.random()*2-1)*0.10});
+  }
 
-  // simple star field
-  const stars = Array.from({length: 110}, (_,i)=>({
-    x: (i*97)%1000 / 1000,
-    y: (i*173)%1000 / 1000,
-    s: ((i*37)%7)+1
-  }));
-
-  // clouds particles
-  const clouds = Array.from({length: 9}, (_,i)=>({
-    x: Math.random()*1.2 - 0.1,
-    y: Math.random()*0.35 + 0.08,
-    v: 0.010 + Math.random()*0.02,
-    w: 0.18 + Math.random()*0.18
-  }));
-
-  // rain/snow particles
-  const drops = Array.from({length: 180}, ()=>({
-    x: Math.random(),
-    y: Math.random(),
-    v: 0.8 + Math.random()*1.2,
-    l: 0.015 + Math.random()*0.02
-  }));
-  const flakes = Array.from({length: 140}, ()=>({
-    x: Math.random(),
-    y: Math.random(),
-    v: 0.12 + Math.random()*0.25,
-    s: 0.004 + Math.random()*0.008,
-    w: (Math.random()*2-1) * 0.10
-  }));
-
-  // walking human pixel sprite (16x24) two frames
-  function drawPixelHuman(x, y, scale, frame, facing=1){
-    const s = scale;
-    const px = (ix,iy,col)=>{
+  // walking human (pixel)
+  function drawHuman(px, py, scale, frame, facing){
+    var s = scale;
+    function pixel(ix,iy,col){
       ctx.fillStyle = col;
-      ctx.fillRect(x + ix*s, y + iy*s, s, s);
-    };
+      ctx.fillRect(px + ix*s, py + iy*s, s, s);
+    }
 
-    // palette based on theme
-    const isLight = (root.getAttribute("data-theme") === "light");
-    const skin = isLight ? "#F2C9A0" : "#E7B98D";
-    const hair = isLight ? "#2b2b2b" : "#1b1b1b";
-    const shirt= isLight ? "#4f8cff" : "#6aa7ff";
-    const pants= isLight ? "#2e3a4f" : "#1f2a3b";
-    const shoe = isLight ? "#111" : "#0a0a0a";
+    var isLight = (root.getAttribute("data-theme")==="light");
+    var skin = isLight ? "#F2C9A0" : "#E7B98D";
+    var hair = isLight ? "#2b2b2b" : "#141414";
+    var shirt= isLight ? "#4f8cff" : "#6aa7ff";
+    var pants= isLight ? "#2e3a4f" : "#1c2738";
+    var shoe = isLight ? "#111" : "#090909";
+    var bag  = isLight ? "#ffb703" : "#ffd166";
 
-    // two leg frames
-    const step = (Math.floor(frame)%2);
+    var step = (Math.floor(frame)%2);
 
-    // 16x24 coordinate system
-    // head
-    const head = [
+    // head (16x5)
+    var head = [
       "....######......",
       "...########.....",
       "...########.....",
       "...########.....",
-      "....######......",
+      "....######......"
     ];
-    // body (shirt)
-    const body = [
+    // body (16x6)
+    var body = [
       "....####........",
       "...######.......",
       "...######.......",
       "...######.......",
       "...######.......",
-      "....####........",
+      "....####........"
     ];
     // legs
-    const legA = [
+    var legA = [
       "..##....##......",
       "..##....##......",
       "..##....##......",
       "..##....##......",
       "..##....##......",
-      "..##....##......",
+      "..##....##......"
     ];
-    const legB = [
+    var legB = [
       "..##....##......",
       "..##....##......",
       "..##....##......",
       "..##....##......",
       "..##....##......",
-      "...##..##.......",
+      "...##..##......."
     ];
+    var legs = (step===0) ? legA : legB;
 
-    // draw head
-    for(let iy=0; iy<head.length; iy++){
-      for(let ix=0; ix<16; ix++){
-        if(head[iy][ix]==="#"){
-          // hair top rows
-          const col = (iy<=1) ? hair : skin;
-          px(ix,iy,col);
+    // draw
+    for(var y=0; y<head.length; y++){
+      for(var x=0; x<16; x++){
+        if(head[y].charAt(x)==="#"){
+          var col = (y<=1) ? hair : skin;
+          pixel(x,y,col);
         }
       }
     }
     // eyes
-    px(6,2, "#0b0b0b"); px(9,2, "#0b0b0b");
+    pixel(6,2,"#0b0b0b"); pixel(9,2,"#0b0b0b");
 
-    // draw body
-    const by0 = 6;
-    for(let iy=0; iy<body.length; iy++){
-      for(let ix=0; ix<16; ix++){
-        if(body[iy][ix]==="#") px(ix, by0+iy, shirt);
+    var by0 = 6;
+    for(var y2=0; y2<body.length; y2++){
+      for(var x2=0; x2<16; x2++){
+        if(body[y2].charAt(x2)==="#") pixel(x2, by0+y2, shirt);
       }
     }
-
-    // arms (simple)
-    px(4,8, skin); px(11,8, skin);
-    px(3,9, skin); px(12,9, skin);
+    // arms
+    pixel(4,8,skin); pixel(11,8,skin);
+    pixel(3,9,skin); pixel(12,9,skin);
 
     // waist
-    px(6,12, pants); px(7,12, pants); px(8,12, pants); px(9,12, pants);
+    pixel(6,12,pants); pixel(7,12,pants); pixel(8,12,pants); pixel(9,12,pants);
 
-    // legs
-    const ly0 = 13;
-    const legs = (step===0) ? legA : legB;
-    for(let iy=0; iy<legs.length; iy++){
-      for(let ix=0; ix<16; ix++){
-        if(legs[iy][ix]==="#") px(ix, ly0+iy, pants);
+    var ly0 = 13;
+    for(var y3=0; y3<legs.length; y3++){
+      for(var x3=0; x3<16; x3++){
+        if(legs[y3].charAt(x3)==="#") pixel(x3, ly0+y3, pants);
       }
     }
     // shoes
-    px(5, ly0+5, shoe); px(10, ly0+5, shoe);
+    pixel(5,ly0+5,shoe); pixel(10,ly0+5,shoe);
 
-    // backpack-ish (optional small)
-    px(2,9, isLight ? "#ffb703" : "#ffd166");
-    px(2,10, isLight ? "#ffb703" : "#ffd166");
+    // bag
+    pixel(2,9,bag); pixel(2,10,bag);
   }
 
-  // scene state
-  const dude = { x: 0.25, y: 0.70, v: 0.06, dir: 1 };
-  let t = 0;
-
-  function skyParams(hourFloat){
-    // hourFloat: 0..24
-    // segments: night(0-5), morning(5-9), day(9-16), sunset(16-19), night(19-24)
-    const h = hourFloat;
+  function skyParams(h){
+    // 0..24
+    var nightTop=[12,16,28], nightBot=[8,10,18];
+    var mornTop=[120,175,255], mornBot=[240,210,160];
+    var dayTop =[80,170,255], dayBot =[200,240,255];
+    var setTop =[255,140,120], setBot=[80,50,120];
 
     function mix(c1,c2,k){
-      // c as [r,g,b]
       return [lerp(c1[0],c2[0],k), lerp(c1[1],c2[1],k), lerp(c1[2],c2[2],k)];
     }
-    const nightTop=[12,16,28], nightBot=[8,10,18];
-    const mornTop=[120,175,255], mornBot=[240,210,160];
-    const dayTop =[80,170,255], dayBot =[200,240,255];
-    const setTop =[255,140,120], setBot=[80,50,120];
 
-    let top, bot, nightness;
+    var top, bot, nightness;
     if(h<5){
       top=nightTop; bot=nightBot; nightness=1;
     }else if(h<9){
-      const k=(h-5)/4;
-      top=mix(nightTop,mornTop,k);
-      bot=mix(nightBot,mornBot,k);
-      nightness=1-k;
+      var k1=(h-5)/4;
+      top=mix(nightTop,mornTop,k1);
+      bot=mix(nightBot,mornBot,k1);
+      nightness=1-k1;
     }else if(h<16){
-      const k=(h-9)/7;
-      top=mix(mornTop,dayTop,k);
-      bot=mix(mornBot,dayBot,k);
+      var k2=(h-9)/7;
+      top=mix(mornTop,dayTop,k2);
+      bot=mix(mornBot,dayBot,k2);
       nightness=0;
     }else if(h<19){
-      const k=(h-16)/3;
-      top=mix(dayTop,setTop,k);
-      bot=mix(dayBot,setBot,k);
-      nightness=k*0.6;
+      var k3=(h-16)/3;
+      top=mix(dayTop,setTop,k3);
+      bot=mix(dayBot,setBot,k3);
+      nightness=k3*0.6;
     }else{
-      const k=(h-19)/5;
-      top=mix(setTop,nightTop,clamp(k,0,1));
-      bot=mix(setBot,nightBot,clamp(k,0,1));
-      nightness=0.6+0.4*clamp(k,0,1);
+      var k4=(h-19)/5;
+      top=mix(setTop,nightTop,clamp(k4,0,1));
+      bot=mix(setBot,nightBot,clamp(k4,0,1));
+      nightness=0.6+0.4*clamp(k4,0,1);
     }
-    return {top, bot, nightness};
+    return {top:top, bot:bot, nightness:nightness};
   }
 
-  function drawScene(dt){
-    t += dt;
-    const rect = canvas.getBoundingClientRect();
-    const W = rect.width, H = rect.height;
+  function bodyPos(p){
+    // arc from left->right, highest in middle
+    var x = lerp(0.08, 0.92, p);
+    var y = 0.60 - Math.sin(p*Math.PI)*0.42;
+    return {x:x, y:y};
+  }
 
-    const hourFloat = sceneHour + sceneMin/60 + sceneSec/3600;
-    const {top, bot, nightness} = skyParams(hourFloat);
+  var dude = { x:0.25, y:0.70, v:0.06, dir:1 };
+  var t = 0;
+
+  function draw(dt){
+    t += dt;
+    var rect = canvas.getBoundingClientRect();
+    var W = rect.width, H = rect.height;
+
+    var hourFloat = sceneHour + sceneMin/60 + sceneSec/3600;
+    var sp = skyParams(hourFloat);
 
     // background gradient
-    const g = ctx.createLinearGradient(0,0,0,H);
-    g.addColorStop(0, `rgb(${top[0]|0},${top[1]|0},${top[2]|0})`);
-    g.addColorStop(1, `rgb(${bot[0]|0},${bot[1]|0},${bot[2]|0})`);
+    var g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, "rgb("+(sp.top[0]|0)+","+(sp.top[1]|0)+","+(sp.top[2]|0)+")");
+    g.addColorStop(1, "rgb("+(sp.bot[0]|0)+","+(sp.bot[1]|0)+","+(sp.bot[2]|0)+")");
     ctx.fillStyle = g;
     ctx.fillRect(0,0,W,H);
 
-    // sun/moon path (simple arc across sky)
-    // sun: 6-18, moon: 18-30 (wrap)
-    const sunActive = (hourFloat >= 6 && hourFloat < 18);
-    const progSun = clamp((hourFloat - 6)/12, 0, 1); // 0..1
-    const progMoon = clamp(((hourFloat >= 18 ? hourFloat : hourFloat+24) - 18)/12, 0, 1);
-
-    function bodyPos(p){
-      // arc: left->right; higher at middle
-      const x = lerp(0.08, 0.92, p);
-      const y = 0.60 - Math.sin(p*Math.PI)*0.42;
-      return {x,y};
-    }
-
-    // stars at night
-    if(nightness > 0.15){
-      ctx.globalAlpha = clamp((nightness-0.1)/0.9, 0, 1) * 0.65;
-      ctx.fillStyle = "white";
-      for(const s of stars){
-        const tw = 0.35 + 0.65*(0.5+0.5*Math.sin(t*1.2 + s.s));
-        const x = s.x*W, y = s.y*H*0.65;
-        ctx.globalAlpha = clamp((nightness-0.1)/0.9, 0, 1) * 0.65 * tw;
-        ctx.fillRect(x, y, 2, 2);
+    // stars
+    if(sp.nightness > 0.15){
+      var base = clamp((sp.nightness-0.1)/0.9, 0, 1);
+      for(var i=0;i<stars.length;i++){
+        var st = stars[i];
+        var tw = 0.35 + 0.65*(0.5+0.5*Math.sin(t*1.2 + st.s));
+        ctx.globalAlpha = base * 0.65 * tw;
+        ctx.fillStyle = "white";
+        ctx.fillRect(st.x*W, st.y*H*0.65, 2, 2);
       }
       ctx.globalAlpha = 1;
     }
 
-    // sun / moon
-    const isLight = (root.getAttribute("data-theme")==="light");
+    // sun/moon positions
+    var sunActive = (hourFloat >= 6 && hourFloat < 18);
+    var progSun = clamp((hourFloat - 6)/12, 0, 1);
+    var progMoon = clamp(((hourFloat >= 18 ? hourFloat : hourFloat+24) - 18)/12, 0, 1);
+
+    var isLight = (root.getAttribute("data-theme")==="light");
+
     if(sunActive){
-      const p = bodyPos(progSun);
+      var pS = bodyPos(progSun);
       ctx.globalAlpha = 0.95;
-      ctx.beginPath();
       ctx.fillStyle = isLight ? "rgba(255,210,120,.95)" : "rgba(255,214,140,.95)";
-      ctx.arc(p.x*W, p.y*H, 22, 0, Math.PI*2);
-      ctx.fill();
-      // glow
+      ctx.beginPath(); ctx.arc(pS.x*W, pS.y*H, 22, 0, Math.PI*2); ctx.fill();
       ctx.globalAlpha = 0.22;
-      ctx.beginPath();
-      ctx.arc(p.x*W, p.y*H, 55, 0, Math.PI*2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(pS.x*W, pS.y*H, 55, 0, Math.PI*2); ctx.fill();
       ctx.globalAlpha = 1;
     }else{
-      const p = bodyPos(progMoon);
+      var pM = bodyPos(progMoon);
       ctx.globalAlpha = 0.95;
-      ctx.beginPath();
-      ctx.fillStyle = isLight ? "rgba(255,255,255,.90)" : "rgba(230,240,255,.90)";
-      ctx.arc(p.x*W, p.y*H, 18, 0, Math.PI*2);
-      ctx.fill();
-      // crater-ish
+      ctx.fillStyle = isLight ? "rgba(255,255,255,.92)" : "rgba(230,240,255,.90)";
+      ctx.beginPath(); ctx.arc(pM.x*W, pM.y*H, 18, 0, Math.PI*2); ctx.fill();
       ctx.globalAlpha = 0.18;
       ctx.fillStyle = "rgba(0,0,0,.25)";
-      ctx.beginPath(); ctx.arc(p.x*W+6, p.y*H-4, 4, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(pM.x*W+6, pM.y*H-4, 4, 0, Math.PI*2); ctx.fill();
       ctx.globalAlpha = 1;
     }
 
     // ground
     ctx.globalAlpha = 0.18;
-    ctx.fillStyle = isLight ? "rgba(0,0,0,.55)" : "rgba(0,0,0,.65)";
+    ctx.fillStyle = isLight ? "rgba(0,0,0,.52)" : "rgba(0,0,0,.65)";
     ctx.fillRect(0, H*0.78, W, H*0.22);
     ctx.globalAlpha = 1;
 
     // weather overlay
-    const kind = wxKind(currentWxCode);
+    var kind = wxKind(currentWxCode);
 
     // clouds/fog
     if(kind==="cloudy" || kind==="drizzle" || kind==="rain" || kind==="fog" || kind==="snow"){
-      const baseAlpha = (kind==="fog") ? 0.55 : 0.28;
+      var baseAlpha = (kind==="fog") ? 0.55 : 0.28;
       ctx.globalAlpha = baseAlpha;
-      for(const c of clouds){
-        c.x += c.v * dt * (1 + (currentWxWind? currentWxWind/20 : 0));
+      for(var j=0;j<clouds.length;j++){
+        var c = clouds[j];
+        c.x += c.v * dt * (1 + (currentWxWind ? currentWxWind/20 : 0));
         if(c.x > 1.25) c.x = -0.25;
-        const cx = c.x*W;
-        const cy = c.y*H;
-        const w = c.w*W;
-        const h = w*0.35;
-        ctx.fillStyle = isLight ? "rgba(255,255,255,.90)" : "rgba(255,255,255,.85)";
-        // simple cloud as 3 circles
+        var cx = c.x*W;
+        var cy = c.y*H;
+        var w  = c.w*W;
+        var hh = w*0.35;
+        ctx.fillStyle = isLight ? "rgba(255,255,255,.92)" : "rgba(255,255,255,.86)";
         ctx.beginPath();
-        ctx.ellipse(cx, cy, w*0.28, h*0.55, 0, 0, Math.PI*2);
-        ctx.ellipse(cx+w*0.18, cy-h*0.15, w*0.22, h*0.50, 0, 0, Math.PI*2);
-        ctx.ellipse(cx-w*0.18, cy-h*0.10, w*0.24, h*0.52, 0, 0, Math.PI*2);
+        ctx.ellipse(cx, cy, w*0.28, hh*0.55, 0, 0, Math.PI*2);
+        ctx.ellipse(cx+w*0.18, cy-hh*0.15, w*0.22, hh*0.50, 0, 0, Math.PI*2);
+        ctx.ellipse(cx-w*0.18, cy-hh*0.10, w*0.24, hh*0.52, 0, 0, Math.PI*2);
         ctx.fill();
       }
       ctx.globalAlpha = 1;
     }
 
     // rain
-    if(kind==="rain" || kind==="drizzle" || kind==="thunder"){
+    if(kind==="rain" || kind==="drizzle"){
       ctx.globalAlpha = 0.35;
       ctx.strokeStyle = isLight ? "rgba(0,0,0,.22)" : "rgba(255,255,255,.20)";
       ctx.lineWidth = 2;
-      for(const d of drops){
-        d.y += d.v * dt * 0.8;
-        d.x += 0.05 * dt; // slight wind
-        if(d.y > 1){ d.y = -Math.random()*0.2; d.x = Math.random(); }
-        if(d.x > 1.1) d.x = -0.1;
-        const x = d.x*W;
-        const y = d.y*H;
+      for(var k=0;k<drops.length;k++){
+        var dr = drops[k];
+        dr.y += dr.v * dt * 0.8;
+        dr.x += 0.05 * dt;
+        if(dr.y > 1){ dr.y = -Math.random()*0.2; dr.x = Math.random(); }
+        if(dr.x > 1.1) dr.x = -0.1;
+        var x = dr.x*W;
+        var y = dr.y*H;
         ctx.beginPath();
         ctx.moveTo(x, y);
-        ctx.lineTo(x+8, y+H*d.l);
+        ctx.lineTo(x+8, y+H*dr.l);
         ctx.stroke();
       }
       ctx.globalAlpha = 1;
@@ -766,15 +789,14 @@
     // snow
     if(kind==="snow"){
       ctx.globalAlpha = 0.65;
-      ctx.fillStyle = isLight ? "rgba(255,255,255,.95)" : "rgba(255,255,255,.85)";
-      for(const f of flakes){
-        f.y += f.v * dt;
-        f.x += (f.w * dt) + 0.02*Math.sin(t*0.6 + f.y*10)*dt;
-        if(f.y > 1){ f.y = -Math.random()*0.2; f.x = Math.random(); }
-        if(f.x > 1.1) f.x = -0.1;
-        const x = f.x*W;
-        const y = f.y*H;
-        ctx.fillRect(x, y, 2, 2);
+      ctx.fillStyle = isLight ? "rgba(255,255,255,.95)" : "rgba(255,255,255,.86)";
+      for(var q=0;q<flakes.length;q++){
+        var fl = flakes[q];
+        fl.y += fl.v * dt;
+        fl.x += (fl.w * dt) + 0.02*Math.sin(t*0.6 + fl.y*10)*dt;
+        if(fl.y > 1){ fl.y = -Math.random()*0.2; fl.x = Math.random(); }
+        if(fl.x > 1.1) fl.x = -0.1;
+        ctx.fillRect(fl.x*W, fl.y*H, 2, 2);
       }
       ctx.globalAlpha = 1;
     }
@@ -784,17 +806,14 @@
     if(dude.x > 0.92){ dude.x = 0.92; dude.dir = -1; }
     if(dude.x < 0.08){ dude.x = 0.08; dude.dir = 1; }
 
-    const scale = 5.5;
-    const remember = ctx.getTransform();
+    var scale = 5.5;
+    var pxX = dude.x*W;
+    var pxY = dude.y*H + Math.sin(t*6.0)*3;
 
     ctx.save();
-    const pxX = dude.x*W;
-    const pxY = dude.y*H;
-    // little bob
-    const bob = Math.sin(t*6.0)*3;
-    // flip
-    ctx.translate(pxX, pxY + bob);
+    ctx.translate(pxX, pxY);
     ctx.scale(dude.dir, 1);
+
     // shadow
     ctx.globalAlpha = 0.20;
     ctx.fillStyle = "black";
@@ -803,20 +822,17 @@
     ctx.fill();
     ctx.globalAlpha = 1;
 
-    drawPixelHuman(-16*scale/2, -24*scale, scale, t*12, dude.dir);
+    drawHuman(-16*scale/2, -24*scale, scale, t*12, dude.dir);
     ctx.restore();
-
-    ctx.setTransform(remember);
   }
 
-  let last = performance.now();
+  var last = performance.now();
   function loop(now){
-    const dt = Math.min(0.033, (now-last)/1000);
+    var dt = Math.min(0.033, (now-last)/1000);
     last = now;
-    // clear & redraw
-    const rect = canvas.getBoundingClientRect();
+    var rect = canvas.getBoundingClientRect();
     ctx.clearRect(0,0,rect.width, rect.height);
-    drawScene(dt);
+    draw(dt);
     requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
